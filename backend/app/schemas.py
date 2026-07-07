@@ -229,11 +229,13 @@ class ImpactCalculatorResponse(BaseModel):
 
 class DistrictIntelligenceResponse(BaseModel):
     daily_summary: str
+    district_summary: str
     top_risk_districts: List[str]
     disease_hotspots: List[str]
     weather_impact_analysis: str
     recommended_government_actions: List[str]
     farmer_outreach_priority: List[str]
+    weather_vulnerability_index: Optional[str] = "N/A"
 
 class SystemAnalyticsResponse(BaseModel):
     total_farmers: int

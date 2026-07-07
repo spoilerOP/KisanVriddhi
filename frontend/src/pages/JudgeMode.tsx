@@ -43,7 +43,16 @@ export const JudgeMode: React.FC<JudgeModeProps> = ({
       }
     },
     {
-      title: "3. Run Crop Disease Identification",
+      title: "3. Weather Intelligence Deep Dive",
+      desc: "Navigate to the Weather Intelligence Center. View the 7-day agricultural forecast with farming status badges, then click 'Analyze with Gemini AI' to generate personalized risk assessments and impact metrics.",
+      actionLabel: "Open Weather Intelligence",
+      tech: "Open-Meteo real-time API → Gemini 2.5 Flash weather-to-farming risk conversion. 6 risk dimensions + personalized farm advice.",
+      run: () => {
+        onNavigate("weather");
+      }
+    },
+    {
+      title: "4. Run Crop Disease Identification",
       desc: "Navigate to the Disease Health Log log page to submit leaf images for diagnosis.",
       actionLabel: "Go to Crop Health Log",
       tech: "Multi-modal leaf diagnosis workflow. Prompts the farmer for speech input details.",
@@ -52,7 +61,7 @@ export const JudgeMode: React.FC<JudgeModeProps> = ({
       }
     },
     {
-      title: "4. Trigger Gemini Vision Diagnosis",
+      title: "5. Trigger Gemini Vision Diagnosis",
       desc: "In the Crop Health Log page, choose an leaf image and click the purple 'Analyze with Gemini Vision' button.",
       actionLabel: "Upload & Test Vision",
       tech: "Google Gemini 2.5 Flash Vision model. Scans structural image inputs server-side.",
@@ -61,7 +70,7 @@ export const JudgeMode: React.FC<JudgeModeProps> = ({
       }
     },
     {
-      title: "5. Synthesize AI Advisory Response",
+      title: "6. Synthesize AI Advisory Response",
       desc: "Open the Personal AI Assistant page. Type a question and view structured timelines, expected benefits, and confidence metrics.",
       actionLabel: "Go to AI Assistant Chat",
       tech: "Gemini 2.5 Flash Text model. Direct API requests wrapped in Pydantic schema validation.",
@@ -70,7 +79,7 @@ export const JudgeMode: React.FC<JudgeModeProps> = ({
       }
     },
     {
-      title: "6. Audit Officer Command Console",
+      title: "7. Audit Officer Command Console",
       desc: "Switch role to Agricultural Officer portal to inspect the global administrative overview.",
       actionLabel: "Go to Officer Console",
       tech: "Agronomist management CRM for case ticketing and remote district advisory audits.",
@@ -79,7 +88,7 @@ export const JudgeMode: React.FC<JudgeModeProps> = ({
       }
     },
     {
-      title: "7. Query District AI Intelligence Center",
+      title: "8. Query District AI Intelligence Center",
       desc: "Click the 'Run System Audit' button in the Officer Console to review daily disease hotspots and action checklists.",
       actionLabel: "Generate District Intelligence",
       tech: "Gemini Copilot text analysis. Aggregates all open cases and risk parameters into a structured district brief.",

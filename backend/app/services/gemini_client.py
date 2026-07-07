@@ -161,3 +161,66 @@ Please generate a JSON object matching this schema EXACTLY:
 }}
 """
     return call_gemini_api(prompt)
+
+def generate_weather_impact_analysis(farmer, weather_data: dict, daily_forecast: list) -> dict:
+    """Use Gemini to convert weather forecasts into personalized farming decisions."""
+    
+    # Build a concise forecast summary for the prompt
+    forecast_summary = []
+    for day in daily_forecast[:7]:
+        forecast_summary.append(
+            f"Date: {day.get('date')}, Max: {day.get('temp_max')}°C, Min: {day.get('temp_min')}°C, "
+            f"Rain: {day.get('rain_probability')}%, Precip: {day.get('precipitation_sum')}mm, "
+            f"Wind: {day.get('wind_max')}km/h, Status: {day.get('farming_status')}"
+        )
+
+    prompt = f"""You are an agricultural weather intelligence AI for Indian farmers.
+Analyze the weather data and farmer profile to generate farming risk assessments and actionable recommendations.
+
+Farmer Profile:
+- Name: {farmer.name}
+- State/District: {farmer.state} / {farmer.district}
+- Soil Type: {farmer.soil_type}, pH: {farmer.soil_ph}
+- Irrigation: {farmer.irrigation_method}
+- Crops: {farmer.crop_history}
+- Land Size: {farmer.land_size} acres
+
+Current Weather:
+- Temperature: {weather_data.get("temperature", 30)}°C (Feels like: {weather_data.get("feels_like", 32)}°C)
+- Humidity: {weather_data.get("humidity", 60)}%
+- Rain Probability: {weather_data.get("rain_probability", 40)}%
+- Wind Speed: {weather_data.get("wind_speed", 12)} km/h
+- UV Index: {weather_data.get("uv_index", 6)}
+- Dry Spell Risk: {weather_data.get("dry_spell_risk", "Low")}
+- Active Alerts: {json.dumps([a.get("type", "") for a in weather_data.get("alerts", [])])}
+
+7-Day Forecast:
+{chr(10).join(forecast_summary)}
+
+Generate a JSON object matching this schema EXACTLY:
+{{
+  "crop_stress_risk": "Low",  // "Low", "Medium", "High", "Critical"
+  "disease_risk": "Medium",
+  "waterlogging_risk": "Low",
+  "irrigation_need": "High",
+  "heatwave_risk": "Low",
+  "pest_outbreak_risk": "Medium",
+  "recommendations": [
+    "Specific actionable recommendation 1",
+    "Specific actionable recommendation 2",
+    "Specific actionable recommendation 3",
+    "Specific actionable recommendation 4"
+  ],
+  "personalized_advice": "2-3 sentence personalized advice based on the farmer's specific crops, soil type, and irrigation method in the context of the current weather.",
+  "impact_metrics": {{
+    "water_saved_liters": 1500,
+    "yield_protected_pct": 12,
+    "diseases_prevented": 3,
+    "profit_preserved_inr": 8500
+  }}
+}}
+
+IMPORTANT: Risk levels must be based on the actual weather data. Be specific to the farmer's crops and region.
+"""
+    return call_gemini_api(prompt)
+

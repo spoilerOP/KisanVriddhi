@@ -41,11 +41,11 @@ export const TechShowcase: React.FC = () => {
             { label: "Farmer Profile", desc: "Soil pH, Land, Crop history" },
             { label: "Voice AI Helper", desc: "STT Input / TTS Readout" },
             { label: "Gemini Advisory", desc: "Server-side context prompt" },
-            { label: "Weather Engine", desc: "Rain, Temp, UV forecasts" },
+            { label: "Weather Intel", desc: "7-day forecast + AI risks" },
             { label: "Gemini Vision", desc: "Multimodal leaf diagnosis" },
-            { label: "Risk Engine", desc: "Active alerts & crop match" },
+            { label: "Risk Engine", desc: "6 farming risk dimensions" },
             { label: "Officer Console", desc: "District Intelligence Briefs" },
-            { label: "Action Plan", desc: "7-Day mitigation tasks" }
+            { label: "Impact Engine", desc: "Yield & profit protection" }
           ].map((step, idx, arr) => (
             <React.Fragment key={idx}>
               <div className="bg-gray-50 dark:bg-zinc-800/40 p-3 rounded-xl border border-gray-150/50 w-[145px] text-center shadow-sm">
@@ -84,6 +84,11 @@ export const TechShowcase: React.FC = () => {
                 <td className="p-3 font-bold text-gray-800 dark:text-zinc-200">Weather Warnings</td>
                 <td className="p-3">❌ Static/General forecasts only</td>
                 <td className="p-3 text-nature-600">✓ Weather Aware Alerts tailored to crop log profile</td>
+              </tr>
+              <tr>
+                <td className="p-3 font-bold text-gray-800 dark:text-zinc-200">Weather Intelligence</td>
+                <td className="p-3">❌ Raw temperature/rain numbers</td>
+                <td className="p-3 text-nature-600">✓ AI-powered 6-dimension agricultural risk conversion with personalized farm advice</td>
               </tr>
               <tr>
                 <td className="p-3 font-bold text-gray-800 dark:text-zinc-200">AI Leaf Diagnostics</td>

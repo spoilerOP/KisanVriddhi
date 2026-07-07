@@ -69,11 +69,23 @@ def get_district_intelligence(
             ]
         }
 
+    # Compute a dynamic Weather Vulnerability Index
+    vulnerability_pct = 15
+    if len(alerts_summary) > 0:
+        critical_alerts = sum(1 for a in alerts_summary if "[Critical]" in a.get("message", ""))
+        high_alerts = sum(1 for a in alerts_summary if "[High]" in a.get("message", ""))
+        vulnerability_pct += (critical_alerts * 25) + (high_alerts * 15)
+        vulnerability_pct = min(95, vulnerability_pct)
+
+    vuln_index = f"{vulnerability_pct}% ({'Severe' if vulnerability_pct > 70 else 'Moderate' if vulnerability_pct > 40 else 'Low'} Risk)"
+
     return schemas.DistrictIntelligenceResponse(
         daily_summary=result.get("daily_summary", ""),
+        district_summary=result.get("daily_summary", ""), # Map to match frontend field
         top_risk_districts=result.get("top_risk_districts", []),
         disease_hotspots=result.get("disease_hotspots", []),
         weather_impact_analysis=result.get("weather_impact_analysis", ""),
         recommended_government_actions=result.get("recommended_government_actions", []),
-        farmer_outreach_priority=result.get("farmer_outreach_priority", [])
+        farmer_outreach_priority=result.get("farmer_outreach_priority", []),
+        weather_vulnerability_index=vuln_index
     )

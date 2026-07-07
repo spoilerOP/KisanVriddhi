@@ -236,4 +236,15 @@ export const api = {
     const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
     return `${API_BASE}${relativePath}`;
   },
+
+  // Weather Intelligence Center
+  async getWeatherIntelligence() {
+    return apiRequest('/api/weather/intelligence');
+  },
+
+  async getWeatherImpactAnalysis() {
+    return apiRequest('/api/weather/impact-analysis', {
+      method: 'POST',
+    });
+  },
 };

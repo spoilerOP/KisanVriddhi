@@ -208,13 +208,34 @@ export const OfficerDashboard: React.FC<OfficerDashboardProps> = ({ lang }) => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-xs">
             {/* Column 1: AI Summary & Action Items */}
             <div className="lg:col-span-2 space-y-4">
-              <div className="bg-white/80 dark:bg-zinc-900/60 p-4 rounded-xl border border-gray-150/45">
-                <h4 className="font-extrabold text-indigo-700 dark:text-indigo-400 text-[10px] uppercase mb-2 tracking-wide flex items-center gap-1">
-                  <Sparkles size={12} /> Executive Copilot Summary
-                </h4>
-                <p className="leading-relaxed text-gray-700 dark:text-zinc-300 font-medium">
-                  {intelData.district_summary}
-                </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-white/80 dark:bg-zinc-900/60 p-4 rounded-xl border border-gray-150/45">
+                  <h4 className="font-extrabold text-indigo-700 dark:text-indigo-400 text-[10px] uppercase mb-2 tracking-wide flex items-center gap-1">
+                    <Sparkles size={12} /> Executive Copilot Summary
+                  </h4>
+                  <p className="leading-relaxed text-gray-700 dark:text-zinc-300 font-medium">
+                    {intelData.district_summary}
+                  </p>
+                </div>
+
+                <div className="bg-white/80 dark:bg-zinc-900/60 p-4 rounded-xl border border-gray-150/45 space-y-3">
+                  <div>
+                    <h4 className="font-extrabold text-indigo-700 dark:text-indigo-400 text-[10px] uppercase mb-1 tracking-wide flex items-center gap-1">
+                      <AlertTriangle size={12} /> Weather Vulnerability Index
+                    </h4>
+                    <span className="text-sm font-black text-indigo-650 dark:text-indigo-400 bg-indigo-55/10 px-2 py-0.5 rounded">
+                      {intelData.weather_vulnerability_index || 'Low Risk'}
+                    </span>
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-indigo-700 dark:text-indigo-400 text-[10px] uppercase mb-1 tracking-wide">
+                      Weather Impact Analysis
+                    </h4>
+                    <p className="leading-relaxed text-gray-700 dark:text-zinc-300 font-medium">
+                      {intelData.weather_impact_analysis}
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div className="bg-white/80 dark:bg-zinc-900/60 p-4 rounded-xl border border-gray-150/45">
