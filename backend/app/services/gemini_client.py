@@ -12,7 +12,7 @@ def call_gemini_api(prompt: str, image_data: dict = None) -> dict:
         logging.warning("GEMINI_API_KEY is not configured in environment.")
         return {}
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
     headers = {"Content-Type": "application/json"}
 
     parts = []

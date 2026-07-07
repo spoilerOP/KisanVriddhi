@@ -30,6 +30,39 @@ export const TechShowcase: React.FC = () => {
         </div>
       </div>
 
+      {/* Visual Pipeline Flowchart */}
+      <div className="bg-white dark:bg-zinc-900 border border-gray-150 dark:border-zinc-800 rounded-2xl p-6 shadow-premium space-y-4">
+        <h3 className="font-extrabold text-sm text-gray-800 dark:text-zinc-200 flex items-center gap-2 border-b border-gray-50 dark:border-zinc-800/50 pb-3">
+          <Network className="h-4.5 w-4.5 text-nature-600 animate-pulse" />
+          KisanVriddhi End-to-End Multimodal Data Pipeline Flow
+        </h3>
+        <div className="flex flex-wrap items-center justify-center gap-2.5 py-4">
+          {[
+            { label: "Farmer Profile", desc: "Soil pH, Land, Crop history" },
+            { label: "Voice AI Helper", desc: "STT Input / TTS Readout" },
+            { label: "Gemini Advisory", desc: "Server-side context prompt" },
+            { label: "Weather Engine", desc: "Rain, Temp, UV forecasts" },
+            { label: "Gemini Vision", desc: "Multimodal leaf diagnosis" },
+            { label: "Risk Engine", desc: "Active alerts & crop match" },
+            { label: "Officer Console", desc: "District Intelligence Briefs" },
+            { label: "Action Plan", desc: "7-Day mitigation tasks" }
+          ].map((step, idx, arr) => (
+            <React.Fragment key={idx}>
+              <div className="bg-gray-50 dark:bg-zinc-800/40 p-3 rounded-xl border border-gray-150/50 w-[145px] text-center shadow-sm">
+                <span className="bg-nature-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full block w-fit mx-auto mb-1">
+                  Step {idx + 1}
+                </span>
+                <p className="font-extrabold text-xs text-gray-800 dark:text-zinc-200 truncate">{step.label}</p>
+                <p className="text-[9px] text-gray-400 mt-0.5 leading-tight font-medium">{step.desc}</p>
+              </div>
+              {idx < arr.length - 1 && (
+                <span className="text-gray-300 dark:text-zinc-700 font-black text-sm shrink-0">→</span>
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+
       {/* Why KisanVriddhi? - Judge Comparison Table */}
       <div className="bg-white dark:bg-zinc-900 border border-gray-150 dark:border-zinc-800 rounded-2xl p-6 shadow-premium space-y-4">
         <h3 className="font-extrabold text-sm text-gray-800 dark:text-zinc-200 flex items-center gap-2 border-b border-gray-50 dark:border-zinc-800/50 pb-3">
