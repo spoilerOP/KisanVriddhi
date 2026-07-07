@@ -31,10 +31,10 @@ def call_gemini_api(prompt: str, image_data: dict = None) -> dict:
 
     headers = {"Content-Type": "application/json"}
     
-    # Attempt gemini-2.0-flash
-    url_2_0 = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+    # Attempt gemini-2.5-flash
+    url_2_5 = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
     try:
-        response = requests.post(url_2_0, headers=headers, json=payload, timeout=20)
+        response = requests.post(url_2_5, headers=headers, json=payload, timeout=20)
         response.raise_for_status()
         resp_json = response.json()
         candidates = resp_json.get("candidates", [])
@@ -42,12 +42,12 @@ def call_gemini_api(prompt: str, image_data: dict = None) -> dict:
             text_content = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "")
             return json.loads(text_content.strip())
     except Exception as e:
-        logging.warning(f"gemini-2.0-flash failed: {e}. Trying stable gemini-1.5-flash fallback...")
+        logging.warning(f"gemini-2.5-flash failed: {e}. Trying gemini-2.0-flash fallback...")
 
-    # Fallback to gemini-1.5-flash
-    url_1_5 = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    # Fallback to gemini-2.0-flash
+    url_2_0 = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
     try:
-        response = requests.post(url_1_5, headers=headers, json=payload, timeout=20)
+        response = requests.post(url_2_0, headers=headers, json=payload, timeout=20)
         response.raise_for_status()
         resp_json = response.json()
         candidates = resp_json.get("candidates", [])
