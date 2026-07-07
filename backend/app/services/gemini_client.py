@@ -6,14 +6,11 @@ import requests
 from app.config import settings
 
 def call_gemini_api(prompt: str, image_data: dict = None) -> dict:
-    """Helper function to make direct HTTP requests to the Gemini 1.5 Flash API."""
+    """Helper function to make direct HTTP requests to the Gemini API."""
     api_key = settings.GEMINI_API_KEY
     if not api_key:
         logging.warning("GEMINI_API_KEY is not configured in environment.")
         return {}
-
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
-    headers = {"Content-Type": "application/json"}
 
     parts = []
     if image_data:
@@ -32,20 +29,33 @@ def call_gemini_api(prompt: str, image_data: dict = None) -> dict:
         }
     }
 
+    headers = {"Content-Type": "application/json"}
+    
+    # Attempt gemini-2.0-flash
+    url_2_0 = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
     try:
-        response = requests.post(url, headers=headers, json=payload, timeout=30)
+        response = requests.post(url_2_0, headers=headers, json=payload, timeout=20)
         response.raise_for_status()
         resp_json = response.json()
-        
         candidates = resp_json.get("candidates", [])
-        if not candidates:
-            logging.error(f"Gemini API returned no candidates. Full response: {resp_json}")
-            return {}
-            
-        text_content = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "")
-        return json.loads(text_content.strip())
+        if candidates:
+            text_content = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+            return json.loads(text_content.strip())
     except Exception as e:
-        logging.error(f"Gemini API call failed: {e}")
+        logging.warning(f"gemini-2.0-flash failed: {e}. Trying stable gemini-1.5-flash fallback...")
+
+    # Fallback to gemini-1.5-flash
+    url_1_5 = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    try:
+        response = requests.post(url_1_5, headers=headers, json=payload, timeout=20)
+        response.raise_for_status()
+        resp_json = response.json()
+        candidates = resp_json.get("candidates", [])
+        if candidates:
+            text_content = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+            return json.loads(text_content.strip())
+    except Exception as e:
+        logging.error(f"Gemini API fallback failed: {e}")
         return {}
 
 def generate_advisory_response(farmer, weather, crop_history, expert_kb, query_str, language: str = None) -> dict:
