@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 import { getTranslation } from '../utils/translate';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,6 +16,14 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ lang }) => {
   const [speaking, setSpeaking] = useState(false);
   const [loading, setLoading] = useState(false);
   const [speechEnabled, setSpeechEnabled] = useState(true);
+
+  // Queue state variables for TTS
+  const [currentChunkIndex, setCurrentChunkIndex] = useState<number>(-1);
+  const [totalChunksCount, setTotalChunksCount] = useState<number>(0);
+  const [speakingStatus, setSpeakingStatus] = useState<string>('idle'); // 'speaking', 'complete', 'idle'
+  const [speakingProgress, setSpeakingProgress] = useState<string>('');
+  const chunksRef = useRef<string[]>([]);
+  const isSpeakingRef = useRef<boolean>(false);
 
   let recognition: any = null;
   if ('webkitSpeechRecognition' in window) {
@@ -48,8 +56,7 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ lang }) => {
 
     setTranscript('');
     setAiResponse(null);
-    window.speechSynthesis.cancel();
-    setSpeaking(false);
+    stopSpeaking();
     
     recognition.onstart = () => {
       setRecognizing(true);
@@ -82,7 +89,7 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ lang }) => {
       
       // Auto TTS response
       if (speechEnabled) {
-        speakText(res.recommendation + ". Why: " + res.why);
+        speakText(getSpeakableText(res));
       }
     } catch (err: any) {
       console.error(err);
@@ -91,26 +98,172 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ lang }) => {
     }
   };
 
+  const getSpeakableText = (res: any): string => {
+    if (!res) return "";
+    let fullText = "";
+    if (lang === 'hi') {
+      fullText = `मुख्य सिफारिश: ${res.recommendation || ''}. ` +
+                 `विवरण: ${res.why || ''}. ` +
+                 (res.expected_benefits?.length ? `अपेक्षित लाभ: ${res.expected_benefits.join(". ")}. ` : "") +
+                 (res.potential_risks?.length ? `संभावित जोखिम: ${res.potential_risks.join(". ")}. ` : "") +
+                 (res.action_plan?.length ? `7 दिवसीय कार्य योजना: ` + res.action_plan.map((act: any) => `दिन ${act.day}: ${act.action}`).join(". ") : "");
+    } else if (lang === 'ml') {
+      fullText = `പ്രധാന ശുപാർശ: ${res.recommendation || ''}. ` +
+                 `വിശദീകരണം: ${res.why || ''}. ` +
+                 (res.expected_benefits?.length ? `പ്രതീക്ഷിക്കുന്ന ഗുണങ്ങൾ: ${res.expected_benefits.join(". ")}. ` : "") +
+                 (res.potential_risks?.length ? `സാധ്യമായ അപകടങ്ങൾ: ${res.potential_risks.join(". ")}. ` : "") +
+                 (res.action_plan?.length ? `7 ദിവസത്തെ കർമ്മ പദ്ധതി: ` + res.action_plan.map((act: any) => `ദിവസം ${act.day}: ${act.action}`).join(". ") : "");
+    } else if (lang === 'te') {
+      fullText = `ముఖ్యమైన సిఫార్సు: ${res.recommendation || ''}. ` +
+                 `వివరణ: ${res.why || ''}. ` +
+                 (res.expected_benefits?.length ? `ఆశించిన ప్రయోజనాలు: ${res.expected_benefits.join(". ")}. ` : "") +
+                 (res.potential_risks?.length ? `సంభావ్య ప్రమాదాలు: ${res.potential_risks.join(". ")}. ` : "") +
+                 (res.action_plan?.length ? `7 రోజుల కార్యాచరణ ప్రణాళిక: ` + res.action_plan.map((act: any) => `రోజు ${act.day}: ${act.action}`).join(". ") : "");
+    } else {
+      fullText = `Primary Recommendation: ${res.recommendation || ''}. ` +
+                 `Rationale: ${res.why || ''}. ` +
+                 (res.expected_benefits?.length ? `Expected Benefits: ${res.expected_benefits.join(". ")}. ` : "") +
+                 (res.potential_risks?.length ? `Potential Risks: ${res.potential_risks.join(". ")}. ` : "") +
+                 (res.action_plan?.length ? `7-Day Mitigation Action Timeline: ` + res.action_plan.map((act: any) => `Day ${act.day}: ${act.action}`).join(". ") : "");
+    }
+    return fullText;
+  };
+
+  const splitTextIntoChunks = (text: string): string[] => {
+    // Split sentences using punctuation boundaries across scripts (. ? ! ।)
+    const sentenceRegex = /[^.!?।]+[.!?।]+/g;
+    const matches = text.match(sentenceRegex);
+    
+    if (!matches) {
+      // Chunk by fixed sizes if no punctuation matches
+      const chunks: string[] = [];
+      let remaining = text;
+      while (remaining.length > 0) {
+        chunks.push(remaining.substring(0, 160));
+        remaining = remaining.substring(160);
+      }
+      return chunks.filter(c => c.trim().length > 0);
+    }
+    
+    const chunks: string[] = [];
+    let currentChunk = "";
+    for (const sentence of matches) {
+      if ((currentChunk + sentence).length > 170) {
+        if (currentChunk.trim()) {
+          chunks.push(currentChunk.trim());
+        }
+        currentChunk = sentence;
+      } else {
+        currentChunk += sentence;
+      }
+    }
+    if (currentChunk.trim()) {
+      chunks.push(currentChunk.trim());
+    }
+    return chunks;
+  };
+
   const speakText = (text: string) => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
-      const cleanText = text.replace(/\*\*/g, '').replace(/[\#\*\_]/g, '');
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.lang = lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : lang === 'ml' ? 'ml-IN' : 'en-IN';
-      utterance.rate = 0.95;
-      utterance.onstart = () => setSpeaking(true);
-      utterance.onend = () => setSpeaking(false);
-      utterance.onerror = () => setSpeaking(false);
-      window.speechSynthesis.speak(utterance);
+      isSpeakingRef.current = true;
+      
+      const cleanText = text.replace(/\*\*/g, '').replace(/[\#\*\_]/g, ' ');
+      const chunks = splitTextIntoChunks(cleanText);
+      chunksRef.current = chunks;
+      
+      console.log("=== TTS AUDIT LOG ===");
+      console.log(`Total advisory character count: ${cleanText.length}`);
+      console.log(`Number of speech chunks: ${chunks.length}`);
+      console.log("Speech chunks payload:", chunks);
+
+      if (chunks.length === 0) {
+        setSpeakingStatus('complete');
+        setSpeakingProgress('Speech Complete');
+        setSpeaking(false);
+        isSpeakingRef.current = false;
+        return;
+      }
+
+      setSpeakingStatus('speaking');
+      setSpeaking(true);
+      setTotalChunksCount(chunks.length);
+      
+      // Start speaking first chunk
+      speakChunk(0);
     }
+  };
+
+  const speakChunk = (index: number) => {
+    if (!isSpeakingRef.current) return;
+    
+    if (index >= chunksRef.current.length) {
+      console.log("=== TTS AUDIT LOG ===");
+      console.log("Speech completion status: SUCCESS (All chunks completed)");
+      setSpeakingStatus('complete');
+      setSpeakingProgress('Speech Complete');
+      setSpeaking(false);
+      isSpeakingRef.current = false;
+      return;
+    }
+
+    const chunkText = chunksRef.current[index];
+    console.log(`Current chunk being spoken: ${index + 1} of ${chunksRef.current.length}`);
+    console.log(`Chunk text: "${chunkText}"`);
+    
+    setSpeakingProgress(`Speaking chunk ${index + 1} of ${chunksRef.current.length}...`);
+    setCurrentChunkIndex(index);
+
+    const utterance = new SpeechSynthesisUtterance(chunkText);
+    const targetLang = lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : lang === 'ml' ? 'ml-IN' : 'en-IN';
+    
+    // Find optimal voice matching target language
+    const voices = window.speechSynthesis.getVoices();
+    const optimalVoice = voices.find(v => v.lang === targetLang || v.lang.startsWith(targetLang.split('-')[0]));
+    if (optimalVoice) {
+      utterance.voice = optimalVoice;
+      console.log(`Optimal local voice selected: ${optimalVoice.name}`);
+    }
+
+    utterance.lang = targetLang;
+    utterance.rate = 0.90; // Natural pacing
+    utterance.pitch = 1.0;
+
+    utterance.onend = () => {
+      speakChunk(index + 1);
+    };
+
+    utterance.onerror = (e) => {
+      console.warn(`SpeechSynthesis error on chunk index ${index}:`, e);
+      speakChunk(index + 1);
+    };
+
+    window.speechSynthesis.speak(utterance);
   };
 
   const stopSpeaking = () => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
+      isSpeakingRef.current = false;
+      chunksRef.current = [];
       setSpeaking(false);
+      setSpeakingStatus('idle');
+      setSpeakingProgress('');
     }
   };
+
+  useEffect(() => {
+    if ('speechSynthesis' in window) {
+      const loadVoices = () => {
+        window.speechSynthesis.getVoices();
+      };
+      loadVoices();
+      window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
+      return () => {
+        window.speechSynthesis.removeEventListener('voiceschanged', loadVoices);
+      };
+    }
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -225,7 +378,7 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ lang }) => {
                   </button>
                 ) : (
                   <button 
-                    onClick={() => speakText(aiResponse.recommendation + ". Why: " + aiResponse.why)}
+                    onClick={() => speakText(getSpeakableText(aiResponse))}
                     className="flex items-center gap-1.5 px-3.5 py-2 bg-nature-50 text-nature-600 hover:bg-nature-100 border border-nature-200/50 rounded-xl text-[11px] font-extrabold transition"
                   >
                     <Volume2 size={14} /> Play Speech Readout
@@ -233,6 +386,21 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ lang }) => {
                 )}
               </div>
             </div>
+
+            {speakingProgress && (
+              <div className="bg-nature-50/30 dark:bg-nature-950/15 border border-nature-200/20 rounded-xl p-3.5 flex items-center justify-between">
+                <span className="text-[11px] font-bold text-nature-700 dark:text-nature-400 flex items-center gap-2">
+                  <span className="flex h-2.5 w-2.5 relative">
+                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${speakingStatus === 'speaking' ? 'bg-nature-500' : 'bg-emerald-500'}`}></span>
+                    <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${speakingStatus === 'speaking' ? 'bg-nature-600' : 'bg-emerald-600'}`}></span>
+                  </span>
+                  {speakingStatus === 'speaking' ? 'Speaking Readout...' : 'Readout Complete'}
+                </span>
+                <span className="text-[10px] font-black text-gray-500 dark:text-zinc-400">
+                  {speakingProgress}
+                </span>
+              </div>
+            )}
 
             <div className="space-y-4">
               <div className="bg-nature-50/30 dark:bg-nature-950/15 p-4 rounded-xl border border-nature-200/40">

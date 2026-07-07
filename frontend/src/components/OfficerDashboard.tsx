@@ -263,7 +263,7 @@ export const OfficerDashboard: React.FC<OfficerDashboardProps> = ({ lang }) => {
                   <Clock size={12} /> Prioritized Outreaches
                 </h4>
                 <div className="space-y-2 font-bold text-[11px]">
-                  {intelData.prioritized_farmer_outreach.map((outreach: string, i: number) => (
+                  {(intelData.farmer_outreach_priority || intelData.prioritized_farmer_outreach || []).map((outreach: string, i: number) => (
                     <div key={i} className="flex gap-2 items-center text-gray-700 dark:text-zinc-300">
                       <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0"></div>
                       <span>{outreach}</span>
