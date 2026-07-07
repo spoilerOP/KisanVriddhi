@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 import { getTranslation } from '../utils/translate';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, MicOff, Volume2, VolumeX, Sparkles, Send, RefreshCw, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Mic, MicOff, Volume2, VolumeX, Sparkles, Send, RefreshCw, AlertTriangle, ArrowRight, Terminal } from 'lucide-react';
 import { Badge, BadgesGroup } from './Badges';
 
 interface VoiceAssistantProps {
@@ -22,6 +22,9 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ lang }) => {
   const [totalChunksCount, setTotalChunksCount] = useState<number>(0);
   const [speakingStatus, setSpeakingStatus] = useState<string>('idle'); // 'speaking', 'complete', 'idle'
   const [speakingProgress, setSpeakingProgress] = useState<string>('');
+  const [availableVoices, setAvailableVoices] = useState<any[]>([]);
+  const [selectedVoiceInfo, setSelectedVoiceInfo] = useState<{ name: string; lang: string } | null>(null);
+  const [voiceWarning, setVoiceWarning] = useState<string>('');
   const chunksRef = useRef<string[]>([]);
   const isSpeakingRef = useRef<boolean>(false);
 
@@ -163,11 +166,60 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ lang }) => {
     return chunks;
   };
 
+  const getOptimalVoice = (targetLang: string) => {
+    if (!('speechSynthesis' in window)) return null;
+    const voices = window.speechSynthesis.getVoices();
+    
+    // 1. Exact locale matching (e.g. 'ml-IN')
+    let matched = voices.find(v => v.lang.toLowerCase() === targetLang.toLowerCase());
+    
+    // 2. Prefix matching (e.g. starts with 'ml')
+    if (!matched) {
+      const prefix = targetLang.split('-')[0].toLowerCase();
+      matched = voices.find(v => v.lang.toLowerCase().startsWith(prefix));
+    }
+    
+    return matched;
+  };
+
   const speakText = (text: string) => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
-      isSpeakingRef.current = true;
+      setVoiceWarning('');
       
+      const targetLang = lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : lang === 'ml' ? 'ml-IN' : 'en-IN';
+      const selectedVoice = getOptimalVoice(targetLang);
+
+      // Audit logs (Requirement 3)
+      console.log("=== TTS LANGUAGE AUDIT ===");
+      console.log("Selected language:", lang);
+      console.log("Selected voice:", selectedVoice?.name || "None");
+      console.log("Voice locale:", selectedVoice?.lang || "N/A");
+      console.log("Text being spoken:", text);
+
+      // Prevent English fallback for non-English languages (Requirement 2 / 7)
+      if (lang !== 'en' && !selectedVoice) {
+        const langNames: Record<string, string> = {
+          hi: 'Hindi',
+          ml: 'Malayalam',
+          te: 'Telugu'
+        };
+        const errMsg = `${langNames[lang] || lang} voice not available on this device.`;
+        setVoiceWarning(errMsg);
+        setSpeakingStatus('complete');
+        setSpeakingProgress(errMsg);
+        setSpeaking(false);
+        isSpeakingRef.current = false;
+        return;
+      }
+
+      if (selectedVoice) {
+        setSelectedVoiceInfo({ name: selectedVoice.name, lang: selectedVoice.lang });
+      } else {
+        setSelectedVoiceInfo(null);
+      }
+
+      isSpeakingRef.current = true;
       const cleanText = text.replace(/\*\*/g, '').replace(/[\#\*\_]/g, ' ');
       const chunks = splitTextIntoChunks(cleanText);
       chunksRef.current = chunks;
@@ -189,7 +241,6 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ lang }) => {
       setSpeaking(true);
       setTotalChunksCount(chunks.length);
       
-      // Start speaking first chunk
       speakChunk(0);
     }
   };
@@ -217,16 +268,14 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ lang }) => {
     const utterance = new SpeechSynthesisUtterance(chunkText);
     const targetLang = lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : lang === 'ml' ? 'ml-IN' : 'en-IN';
     
-    // Find optimal voice matching target language
-    const voices = window.speechSynthesis.getVoices();
-    const optimalVoice = voices.find(v => v.lang === targetLang || v.lang.startsWith(targetLang.split('-')[0]));
-    if (optimalVoice) {
-      utterance.voice = optimalVoice;
-      console.log(`Optimal local voice selected: ${optimalVoice.name}`);
+    const selectedVoice = getOptimalVoice(targetLang);
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
     }
 
+    // Explicitly enforce target lang on utterance (Requirement 4)
     utterance.lang = targetLang;
-    utterance.rate = 0.90; // Natural pacing
+    utterance.rate = 0.90; // Clear, slower pacing
     utterance.pitch = 1.0;
 
     utterance.onend = () => {
@@ -252,15 +301,23 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ lang }) => {
     }
   };
 
+  // Load and subscribe asynchronously to browser voices (Requirement 6)
+  const loadVoicesList = () => {
+    if ('speechSynthesis' in window) {
+      const voices = window.speechSynthesis.getVoices();
+      setAvailableVoices(voices);
+      console.log("=== TTS VOICES LOADED ===");
+      voices.forEach((v, i) => {
+        console.log(`Voice ${i + 1}: ${v.name} (${v.lang}) ${v.default ? '[DEFAULT]' : ''}`);
+      });
+    }
+  };
+
   useEffect(() => {
     if ('speechSynthesis' in window) {
-      const loadVoices = () => {
-        window.speechSynthesis.getVoices();
-      };
-      loadVoices();
-      window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
-      return () => {
-        window.speechSynthesis.removeEventListener('voiceschanged', loadVoices);
+      loadVoicesList();
+      window.speechSynthesis.onvoiceschanged = () => {
+        loadVoicesList();
       };
     }
   }, []);
@@ -385,6 +442,46 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ lang }) => {
                   </button>
                 )}
               </div>
+            </div>
+
+            {/* TTS Diagnostic Panel */}
+            <div className="bg-gray-50 dark:bg-zinc-800/40 p-4 rounded-xl border border-gray-150/50 space-y-2.5">
+              <h4 className="font-extrabold text-[10px] uppercase text-gray-400 tracking-wider flex items-center gap-1.5">
+                <Terminal className="h-3.5 w-3.5 text-nature-600" />
+                Speech Synthesis Diagnostic Panel
+              </h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-[11px] font-bold">
+                <div className="bg-white dark:bg-zinc-900 p-2.5 rounded-lg border border-gray-150/40">
+                  <span className="text-[9px] text-gray-400 block uppercase">Target Language</span>
+                  <span className="text-gray-800 dark:text-zinc-200 uppercase">{lang === 'hi' ? 'Hindi (hi-IN)' : lang === 'te' ? 'Telugu (te-IN)' : lang === 'ml' ? 'Malayalam (ml-IN)' : 'English (en-IN)'}</span>
+                </div>
+                <div className="bg-white dark:bg-zinc-900 p-2.5 rounded-lg border border-gray-150/40">
+                  <span className="text-[9px] text-gray-400 block uppercase">Selected Voice</span>
+                  <span className={`truncate block ${selectedVoiceInfo ? 'text-gray-800 dark:text-zinc-200' : 'text-red-600 dark:text-red-400'}`}>
+                    {selectedVoiceInfo?.name || 'None Selected'}
+                  </span>
+                </div>
+                <div className="bg-white dark:bg-zinc-900 p-2.5 rounded-lg border border-gray-150/40">
+                  <span className="text-[9px] text-gray-400 block uppercase">Voice Locale</span>
+                  <span className="text-gray-800 dark:text-zinc-200 block truncate">{selectedVoiceInfo?.lang || 'N/A'}</span>
+                </div>
+                <div className="bg-white dark:bg-zinc-900 p-2.5 rounded-lg border border-gray-150/40">
+                  <span className="text-[9px] text-gray-400 block uppercase">Installed Voices</span>
+                  <span className="text-gray-800 dark:text-zinc-200">{availableVoices.length} voices</span>
+                </div>
+              </div>
+
+              {voiceWarning && (
+                <div className="bg-red-50/50 dark:bg-red-950/10 border border-red-200/30 p-3 rounded-lg text-red-650 flex items-start gap-2">
+                  <AlertTriangle className="h-4.5 w-4.5 shrink-0" />
+                  <div>
+                    <p className="font-extrabold text-[11px]">{voiceWarning}</p>
+                    <p className="text-[9px] text-gray-450 leading-relaxed font-semibold mt-0.5">
+                      Please install the speech synthesis language pack for {lang === 'hi' ? 'Hindi' : lang === 'te' ? 'Telugu' : lang === 'ml' ? 'Malayalam' : 'English'} in your operating system or browser settings.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {speakingProgress && (
