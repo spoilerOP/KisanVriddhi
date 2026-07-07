@@ -8,9 +8,13 @@ import { WeatherCenter } from './components/WeatherCenter';
 import { CropHealthLog } from './components/CropHealthLog';
 import { AssistantChat } from './components/AssistantChat';
 import { OfficerDashboard } from './components/OfficerDashboard';
+import { VoiceAssistant } from './components/VoiceAssistant';
+import { TechShowcase } from './pages/TechShowcase';
+import { JudgeMode } from './pages/JudgeMode';
 import { 
   Sprout, Compass, CloudSun, Upload, Bot, LayoutDashboard, 
-  Menu, X, Sun, Moon, LogOut, ShieldAlert, Lock, UserPlus, LogIn 
+  Menu, X, Sun, Moon, LogOut, ShieldAlert, Lock, UserPlus, LogIn,
+  Mic, Cpu, Sparkles
 } from 'lucide-react';
 
 const MainAppContent: React.FC = () => {
@@ -449,6 +453,9 @@ const MainAppContent: React.FC = () => {
     { id: 'weather', name: getTranslation('weather', lang), icon: CloudSun },
     { id: 'disease', name: getTranslation('diseaseLog', lang), icon: Upload },
     { id: 'assistant', name: getTranslation('assistant', lang), icon: Bot },
+    { id: 'voice', name: 'Voice Advisor', icon: Mic },
+    { id: 'tech', name: 'AI Tech Showcase', icon: Cpu },
+    { id: 'judge', name: 'Judge Walkthrough', icon: Sparkles }
   ];
 
   return (
@@ -648,6 +655,24 @@ const MainAppContent: React.FC = () => {
               {activeTab === 'weather' && <WeatherCenter lang={lang} />}
               {activeTab === 'disease' && <CropHealthLog lang={lang} />}
               {activeTab === 'assistant' && <AssistantChat lang={lang} />}
+              {activeTab === 'voice' && <VoiceAssistant lang={lang} />}
+              {activeTab === 'tech' && <TechShowcase />}
+              {activeTab === 'judge' && (
+                <JudgeMode 
+                  lang={lang} 
+                  onSetFarmerId={(id) => {
+                    if (id === "FARM-CRIT-992") {
+                      login({ username: "9876500003", password: "demo1234" }).catch(e => console.error(e));
+                    } else if (id === "FARM-MED-202") {
+                      login({ username: "9876500002", password: "demo1234" }).catch(e => console.error(e));
+                    } else {
+                      login({ username: "9876500001", password: "demo1234" }).catch(e => console.error(e));
+                    }
+                  }}
+                  onNavigate={setActiveTab}
+                  currentFarmerId={user.farmer_id || ''}
+                />
+              )}
             </>
           )}
         </main>

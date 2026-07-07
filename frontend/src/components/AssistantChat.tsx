@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { api } from '../services/api';
 import { getTranslation } from '../utils/translate';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Mic, Play, Square, Bot, PhoneCall, CheckCircle2, Clock, MessageCircle, X, ChevronDown } from 'lucide-react';
+import { Send, Mic, Play, Square, Bot, PhoneCall, CheckCircle2, Clock, MessageCircle, X, ChevronDown, AlertTriangle } from 'lucide-react';
 
 interface AssistantChatProps {
   lang: string;
@@ -13,6 +13,15 @@ interface Message {
   sender: 'user' | 'assistant';
   text: string;
   voiceUrl?: string;
+  geminiData?: {
+    recommendation: string;
+    why: string;
+    potential_risks: string[];
+    expected_benefits: string[];
+    advisory_strength: string;
+    evidence_sources: string[];
+    action_plan: { day: number; action: string }[];
+  };
 }
 
 interface OfficerReply {
@@ -108,12 +117,13 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ lang }) => {
     setSending(true);
 
     try {
-      const response = await api.sendMessage({ message: queryText });
+      // Call Gemini server-side advisory endpoint
+      const response = await api.sendGeminiMessage({ message: queryText });
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         sender: 'assistant',
-        text: response.response,
-        voiceUrl: response.voice_response_url
+        text: response.recommendation,
+        geminiData: response
       }]);
     } catch (err: any) {
       setMessages(prev => [...prev, {
@@ -278,16 +288,91 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ lang }) => {
               animate={{ opacity: 1, y: 0 }}
               className={`flex items-start gap-3 max-w-[88%] ${msg.sender === 'user' ? 'ml-auto flex-row-reverse' : ''}`}
             >
-              <div className={`p-3 rounded-2xl text-xs leading-relaxed font-medium whitespace-pre-line shadow-sm ${
+              <div className={`p-3.5 rounded-2xl text-xs leading-relaxed font-medium whitespace-pre-line shadow-premium ${
                 msg.sender === 'user'
                   ? 'bg-nature-600 text-white rounded-tr-sm'
                   : 'bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700/50 text-gray-800 dark:text-zinc-200 rounded-tl-sm'
               }`}>
                 {msg.text}
+                
+                {msg.sender === 'assistant' && msg.geminiData && (
+                  <div className="mt-4 space-y-4 border-t border-gray-100 dark:border-zinc-700/55 pt-3 text-xs text-gray-700 dark:text-zinc-300">
+                    <div className="bg-nature-50/50 dark:bg-nature-950/20 p-3 rounded-xl border border-nature-200/30">
+                      <p className="font-extrabold text-[10px] uppercase text-nature-700 dark:text-nature-400 mb-1">
+                        Why this recommendation?
+                      </p>
+                      <p className="leading-relaxed font-semibold">{msg.geminiData.why}</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="bg-emerald-50/20 dark:bg-emerald-950/15 p-3 rounded-xl border border-emerald-100/50 dark:border-emerald-900/20">
+                        <p className="font-bold text-emerald-700 dark:text-emerald-400 text-[10px] uppercase mb-1.5 flex items-center gap-1">
+                          <CheckCircle2 size={12} /> Expected Benefits
+                        </p>
+                        <ul className="space-y-1">
+                          {msg.geminiData.expected_benefits.map((b, i) => (
+                            <li key={i} className="text-[11px] leading-relaxed font-medium flex items-start gap-1">
+                              <span className="text-emerald-500 mr-0.5">•</span> {b}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="bg-red-50/20 dark:bg-red-950/15 p-3 rounded-xl border border-red-100/50 dark:border-red-900/20">
+                        <p className="font-bold text-red-700 dark:text-red-400 text-[10px] uppercase mb-1.5 flex items-center gap-1">
+                          <AlertTriangle size={12} /> Potential Risks
+                        </p>
+                        <ul className="space-y-1">
+                          {msg.geminiData.potential_risks.map((r, i) => (
+                            <li key={i} className="text-[11px] leading-relaxed font-medium flex items-start gap-1">
+                              <span className="text-red-500 mr-0.5">•</span> {r}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+
+                    {/* Confidence & Source Attribution */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-gray-50 dark:bg-zinc-900/50 rounded-xl border border-gray-150/40 text-[10px] font-bold text-gray-500">
+                      <div className="flex items-center gap-1">
+                        <span>Advisory Strength:</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] ${
+                          msg.geminiData.advisory_strength === 'High' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {msg.geminiData.advisory_strength}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span>Evidence:</span>
+                        {msg.geminiData.evidence_sources.map((s, idx) => (
+                          <span key={idx} className="bg-gray-150 dark:bg-zinc-800 px-2 py-0.5 rounded text-[8.5px]">
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 7 Day Timeline Plan */}
+                    <div className="border border-gray-150 dark:border-zinc-800 rounded-xl p-3.5 space-y-3 bg-white dark:bg-zinc-900">
+                      <p className="font-extrabold text-[10px] uppercase text-gray-400 tracking-wider flex items-center gap-1">
+                        <Clock size={12} /> Next 7 Days Action Plan
+                      </p>
+                      <div className="relative border-l border-gray-150 dark:border-zinc-800 ml-2 pl-3 space-y-3 mt-2">
+                        {msg.geminiData.action_plan.map((item, idx) => (
+                          <div key={idx} className="relative text-[11px]">
+                            <div className="absolute -left-[16.5px] top-1 w-2 h-2 rounded-full bg-nature-600 border border-white dark:border-zinc-900"></div>
+                            <span className="font-extrabold text-nature-700 dark:text-nature-400 block">Day {item.day}</span>
+                            <p className="text-gray-700 dark:text-zinc-300 font-semibold leading-relaxed mt-0.5">{item.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {msg.sender === 'assistant' && (
                   <button
                     onClick={() => handleTTSRead(msg.text)}
-                    className="mt-2 flex items-center gap-1 text-[9px] font-bold text-nature-600 dark:text-nature-400 hover:underline"
+                    className="mt-3.5 flex items-center gap-1 text-[9px] font-bold text-nature-600 dark:text-nature-400 hover:underline"
                   >
                     <Play className="h-3 w-3 fill-current" />
                     Hear Voice Advisory

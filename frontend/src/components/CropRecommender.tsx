@@ -196,6 +196,44 @@ export const CropRecommender: React.FC<CropRecommenderProps> = ({ lang }) => {
                       </div>
                     </div>
 
+                    {/* AI Explainability Panel */}
+                    <div className="bg-white dark:bg-zinc-900 border border-gray-150 dark:border-zinc-800 rounded-2xl p-6 shadow-premium space-y-4">
+                      <h4 className="font-bold text-gray-800 dark:text-zinc-200 text-sm flex items-center gap-2 border-b border-gray-50 dark:border-zinc-800/50 pb-2">
+                        <Award className="h-4.5 w-4.5 text-nature-600 animate-pulse" />
+                        Why This Crop? (AI Suitability Factors)
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        <div className="flex items-center gap-2 p-2.5 bg-gray-50 dark:bg-zinc-800/40 rounded-xl">
+                          <span className="text-emerald-500 font-black text-sm">✓</span>
+                          <div>
+                            <p className="font-extrabold text-gray-700 dark:text-zinc-200">Soil Structure</p>
+                            <p className="text-[10px] text-gray-400">Match for {form.soil_type} soil type</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 p-2.5 bg-gray-50 dark:bg-zinc-800/40 rounded-xl">
+                          <span className="text-emerald-500 font-black text-sm">✓</span>
+                          <div>
+                            <p className="font-extrabold text-gray-700 dark:text-zinc-200">Soil Chemistry (pH)</p>
+                            <p className="text-[10px] text-gray-400">pH {form.soil_ph} fits optimal uptake range</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 p-2.5 bg-gray-50 dark:bg-zinc-800/40 rounded-xl">
+                          <span className="text-emerald-500 font-black text-sm">✓</span>
+                          <div>
+                            <p className="font-extrabold text-gray-700 dark:text-zinc-200">Seasonal Climate</p>
+                            <p className="text-[10px] text-gray-400">{form.season} temperatures align</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 p-2.5 bg-gray-50 dark:bg-zinc-800/40 rounded-xl">
+                          <span className="text-emerald-500 font-black text-sm">✓</span>
+                          <div>
+                            <p className="font-extrabold text-gray-700 dark:text-zinc-200">Water Index Match</p>
+                            <p className="text-[10px] text-gray-400">Precipitation meets moisture demands</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Reasons Card */}
                     <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/80 rounded-2xl p-6 shadow-premium">
                       <h4 className="font-bold text-gray-800 dark:text-zinc-200 text-sm flex items-center gap-2 mb-4 border-b border-gray-50 dark:border-zinc-800/50 pb-2">

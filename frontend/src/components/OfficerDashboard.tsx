@@ -8,8 +8,9 @@ import {
 } from 'recharts';
 import { 
   Users, FolderHeart, BarChart3, Edit, CheckCircle, 
-  MapPin, ShieldAlert, AlertTriangle, RefreshCw 
+  MapPin, ShieldAlert, AlertTriangle, RefreshCw, Sparkles, Clock, CheckSquare, Target
 } from 'lucide-react';
+import { Badge, BadgesGroup } from './Badges';
 
 interface OfficerDashboardProps {
   lang: string;
@@ -29,6 +30,22 @@ export const OfficerDashboard: React.FC<OfficerDashboardProps> = ({ lang }) => {
   const [selectedCase, setSelectedCase] = useState<any>(null);
   const [remarks, setRemarks] = useState('');
   const [updatingCase, setUpdatingCase] = useState(false);
+
+  // Officer AI District Intelligence states
+  const [intelData, setIntelData] = useState<any>(null);
+  const [loadingIntel, setLoadingIntel] = useState(false);
+
+  const handleLoadIntel = async () => {
+    try {
+      setLoadingIntel(true);
+      const res = await api.getDistrictIntelligence();
+      setIntelData(res);
+    } catch {
+      // fallback handled gracefully
+    } finally {
+      setLoadingIntel(false);
+    }
+  };
 
   const fetchOfficerData = async () => {
     try {
@@ -60,6 +77,7 @@ export const OfficerDashboard: React.FC<OfficerDashboardProps> = ({ lang }) => {
 
   useEffect(() => {
     fetchOfficerData();
+    handleLoadIntel();
   }, []);
 
   const handleReviewCase = async (c: any) => {
@@ -156,6 +174,110 @@ export const OfficerDashboard: React.FC<OfficerDashboardProps> = ({ lang }) => {
           <RefreshCw className="h-4 w-4" />
           Sync Directory
         </button>
+      </div>
+
+      {/* Google AI District Intelligence Center (Copilot) */}
+      <div className="bg-gradient-to-br from-indigo-900/10 via-indigo-950/5 to-transparent border border-indigo-500/20 p-6 rounded-2xl shadow-premium space-y-4">
+        <div className="flex flex-wrap justify-between items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-indigo-600 text-white rounded-xl">
+              <Sparkles className="h-5 w-5 animate-pulse" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-sm text-gray-800 dark:text-zinc-200">
+                District AI Intelligence Center (Gemini Copilot)
+              </h3>
+              <p className="text-[10px] text-gray-400 font-bold">Daily Threat Briefing & Automated Agronomist Action Items</p>
+            </div>
+          </div>
+          <button
+            onClick={handleLoadIntel}
+            disabled={loadingIntel}
+            className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loadingIntel ? 'animate-spin' : ''}`} />
+            Run System Audit
+          </button>
+        </div>
+
+        {loadingIntel ? (
+          <div className="text-center py-6 text-xs text-gray-400 font-semibold animate-pulse">
+            Analyzing cases, outbreaks, and weather models...
+          </div>
+        ) : intelData ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-xs">
+            {/* Column 1: AI Summary & Action Items */}
+            <div className="lg:col-span-2 space-y-4">
+              <div className="bg-white/80 dark:bg-zinc-900/60 p-4 rounded-xl border border-gray-150/45">
+                <h4 className="font-extrabold text-indigo-700 dark:text-indigo-400 text-[10px] uppercase mb-2 tracking-wide flex items-center gap-1">
+                  <Sparkles size={12} /> Executive Copilot Summary
+                </h4>
+                <p className="leading-relaxed text-gray-700 dark:text-zinc-300 font-medium">
+                  {intelData.district_summary}
+                </p>
+              </div>
+
+              <div className="bg-white/80 dark:bg-zinc-900/60 p-4 rounded-xl border border-gray-150/45">
+                <h4 className="font-extrabold text-indigo-700 dark:text-indigo-400 text-[10px] uppercase mb-2.5 tracking-wide flex items-center gap-1">
+                  <CheckSquare size={12} /> Recommended Government Actions
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 font-medium">
+                  {intelData.recommended_government_actions.map((act: string, i: number) => (
+                    <div key={i} className="flex items-start gap-2 p-2 bg-gray-50 dark:bg-zinc-800/40 rounded-lg">
+                      <span className="text-indigo-600 font-black text-sm shrink-0">☐</span>
+                      <span className="text-gray-700 dark:text-zinc-300 leading-normal">{act}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Column 2: Hotspots & Outreaches */}
+            <div className="space-y-4">
+              <div className="bg-white/80 dark:bg-zinc-900/60 p-4 rounded-xl border border-gray-150/45">
+                <h4 className="font-extrabold text-red-650 text-[10px] uppercase mb-2 tracking-wide flex items-center gap-1">
+                  <Target size={12} /> Disease Hotspots & Weather Risk Areas
+                </h4>
+                <div className="space-y-2 font-bold">
+                  {intelData.top_risk_districts.map((zone: string, i: number) => (
+                    <div key={i} className="flex justify-between items-center border-b border-gray-100/50 pb-1.5 last:border-0 last:pb-0">
+                      <span className="text-gray-700 dark:text-zinc-350">{zone}</span>
+                      <span className="bg-red-50 text-red-600 text-[9px] px-1.5 py-0.5 rounded uppercase font-extrabold border border-red-200/50">
+                        Critical
+                      </span>
+                    </div>
+                  ))}
+                  {intelData.disease_hotspots.map((hotspot: string, i: number) => (
+                    <div key={i} className="flex justify-between items-center border-b border-gray-100/50 pb-1.5 last:border-0 last:pb-0">
+                      <span className="text-gray-700 dark:text-zinc-350">{hotspot}</span>
+                      <span className="bg-orange-50 text-orange-600 text-[9px] px-1.5 py-0.5 rounded uppercase font-extrabold border border-orange-200/50">
+                        Outbreak
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white/80 dark:bg-zinc-900/60 p-4 rounded-xl border border-gray-150/45">
+                <h4 className="font-extrabold text-indigo-700 dark:text-indigo-400 text-[10px] uppercase mb-2 tracking-wide flex items-center gap-1">
+                  <Clock size={12} /> Prioritized Outreaches
+                </h4>
+                <div className="space-y-2 font-bold text-[11px]">
+                  {intelData.prioritized_farmer_outreach.map((outreach: string, i: number) => (
+                    <div key={i} className="flex gap-2 items-center text-gray-700 dark:text-zinc-300">
+                      <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0"></div>
+                      <span>{outreach}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-6 text-xs text-gray-400 font-semibold">
+            No report loaded. Click Run System Audit to generate Gemini intelligence summary.
+          </div>
+        )}
       </div>
 
       {/* Navigation Tabs */}

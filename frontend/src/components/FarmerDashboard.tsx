@@ -6,6 +6,7 @@ import {
   Sprout, CloudSun, AlertTriangle, HelpCircle, 
   Droplet, Compass, Thermometer, Wind, RefreshCw, FileText
 } from 'lucide-react';
+import { Badge, BadgesGroup } from './Badges';
 
 interface FarmerDashboardProps {
   lang: string;
@@ -14,6 +15,7 @@ interface FarmerDashboardProps {
 
 export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ lang, onNavigate }) => {
   const [data, setData] = useState<any>(null);
+  const [impactData, setImpactData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -23,6 +25,10 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ lang, onNaviga
       setError('');
       const response = await api.getDashboard();
       setData(response);
+      
+      // Fetch dynamic AI impact metrics
+      const impactRes = await api.getFarmerImpact();
+      setImpactData(impactRes);
     } catch (err: any) {
       setError(err.message || 'Failed to load dashboard data.');
     } finally {
@@ -92,7 +98,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ lang, onNaviga
         <div className="space-y-3">
           <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
             <AlertTriangle className="h-4.5 w-4.5 text-orange-500 animate-pulse" />
-            {getTranslation('alertCenter', lang)}
+            Active Smart Risks & Alerts
           </h3>
           <motion.div 
             initial="hidden"
@@ -143,16 +149,19 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ lang, onNaviga
         </div>
       )}
 
-      {/* Grid 1: Welcome & Farm Risk Breakdown */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 p-6 bg-gradient-to-br from-nature-600 to-nature-800 text-white rounded-2xl shadow-premium relative overflow-hidden flex flex-col justify-between min-h-[220px]">
+      {/* Grid 1: Welcome & Farm Risk Breakdown & Impact Calculator */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-2 p-6 bg-gradient-to-br from-nature-600 to-nature-800 text-white rounded-2xl shadow-premium relative overflow-hidden flex flex-col justify-between min-h-[220px]">
           <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-6 translate-y-6">
             <Sprout size={200} />
           </div>
           <div className="relative z-10">
-            <span className="text-xs uppercase tracking-wider bg-white/20 px-2.5 py-1 rounded-full font-medium">
-              {profile.farmer_id}
-            </span>
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className="text-xs uppercase tracking-wider bg-white/20 px-2.5 py-1 rounded-full font-medium">
+                {profile.farmer_id}
+              </span>
+              <BadgesGroup badges={['ai', 'expert', 'google']} />
+            </div>
             <h2 className="text-2xl md:text-3xl font-extrabold font-sans mt-3">
               {getTranslation('greeting', lang)}, {profile.name}!
             </h2>
@@ -179,9 +188,12 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ lang, onNaviga
         {/* Improved Risk Score breakdown card */}
         <div className="p-6 bg-white dark:bg-zinc-900 border border-gray-150 dark:border-zinc-800 rounded-2xl shadow-premium flex flex-col justify-between">
           <div>
-            <h3 className="font-bold text-xs text-gray-400 uppercase tracking-wide">
-              {getTranslation('farmRiskScore', lang)}
-            </h3>
+            <div className="flex justify-between items-start">
+              <h3 className="font-bold text-xs text-gray-400 uppercase tracking-wide">
+                {getTranslation('farmRiskScore', lang)}
+              </h3>
+              <Badge type="weather" />
+            </div>
             
             <div className="flex items-baseline gap-2 mt-2">
               <span className="text-4xl font-black text-gray-800 dark:text-zinc-200">
@@ -227,6 +239,49 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ lang, onNaviga
                 {risk_breakdown?.disease_risk || 'Low'}
               </span>
             </div>
+          </div>
+        </div>
+
+        {/* NEW Expected Impact Card */}
+        <div className="p-6 bg-white dark:bg-zinc-900 border border-gray-150 dark:border-zinc-800 rounded-2xl shadow-premium flex flex-col justify-between">
+          <div>
+            <div className="flex justify-between items-start">
+              <h3 className="font-bold text-xs text-gray-400 uppercase tracking-wide">
+                Expected AI Yield Impact
+              </h3>
+              <Badge type="gov" />
+            </div>
+            
+            {impactData ? (
+              <div className="space-y-3 mt-4">
+                <div className="flex items-center justify-between border-b border-gray-50 dark:border-zinc-850 pb-1.5">
+                  <span className="text-[11px] text-gray-500 font-semibold">Yield Increase:</span>
+                  <span className="text-xs font-black text-emerald-600">+{impactData.yield_increase_pct}%</span>
+                </div>
+                <div className="flex items-center justify-between border-b border-gray-50 dark:border-zinc-850 pb-1.5">
+                  <span className="text-[11px] text-gray-500 font-semibold">Water Savings:</span>
+                  <span className="text-xs font-black text-blue-500">-{impactData.water_savings_pct}%</span>
+                </div>
+                <div className="flex items-center justify-between border-b border-gray-50 dark:border-zinc-850 pb-1.5">
+                  <span className="text-[11px] text-gray-500 font-semibold">Disease Reduction:</span>
+                  <span className="text-xs font-black text-purple-500">-{impactData.disease_reduction_pct}%</span>
+                </div>
+                <div className="flex items-center justify-between pt-0.5">
+                  <span className="text-[11px] text-gray-500 font-semibold">Est. Profit Uplift:</span>
+                  <span className="text-xs font-extrabold text-nature-600 dark:text-nature-400">
+                    +₹{impactData.profit_increase_inr.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-400 text-xs">
+                Computing impact parameters...
+              </div>
+            )}
+          </div>
+
+          <div className="mt-2 text-[9px] text-gray-400 leading-relaxed font-semibold">
+            Based on soil pH match, dynamic forecast rainfall index, and advisor mitigation.
           </div>
         </div>
       </div>

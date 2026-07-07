@@ -196,4 +196,31 @@ export const api = {
       method: 'PUT',
     });
   },
+
+  // Hackathon Enhancements APIs
+  async sendGeminiMessage(payload: { message: string }) {
+    return apiRequest('/api/assistant/gemini-chat', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async diagnoseLeafVision(formData: FormData) {
+    return apiRequest('/api/assistant/gemini-vision', {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  async getFarmerImpact() {
+    return apiRequest('/api/farmers/impact');
+  },
+
+  async getDistrictIntelligence() {
+    return apiRequest('/api/officer/district-intelligence');
+  },
+
+  async getSystemAnalytics() {
+    return apiRequest('/api/analytics/system-metrics');
+  },
 };

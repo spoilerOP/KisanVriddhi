@@ -6,6 +6,7 @@ import {
   Upload, Mic, FileText, AlertCircle, HelpCircle, 
   Send, CheckCircle, RefreshCw, PhoneCall, ListFilter 
 } from 'lucide-react';
+import { Badge, BadgesGroup } from './Badges';
 
 interface CropHealthLogProps {
   lang: string;
@@ -21,6 +22,8 @@ export const CropHealthLog: React.FC<CropHealthLogProps> = ({ lang }) => {
   
   // Diagnosis states
   const [diagnosis, setDiagnosis] = useState<any>(null);
+  const [visionResult, setVisionResult] = useState<any>(null);
+  const [analyzingVision, setAnalyzingVision] = useState(false);
   const [symptoms, setSymptoms] = useState<string[]>([]);
   const [answers, setAnswers] = useState<Record<string, boolean>>({});
   const [diagnosing, setDiagnosing] = useState(false);
@@ -68,6 +71,26 @@ export const CropHealthLog: React.FC<CropHealthLogProps> = ({ lang }) => {
     setVoiceFile(file);
   };
 
+  const handleVisionAnalysis = async () => {
+    if (!imageFile) return;
+    try {
+      setAnalyzingVision(true);
+      setDiagnosis(null);
+      setVisionResult(null);
+      
+      const formData = new FormData();
+      formData.append('image', imageFile);
+      
+      const res = await api.diagnoseLeafVision(formData);
+      setVisionResult(res);
+      fetchHistory();
+    } catch (err: any) {
+      alert(err.message || 'Vision analysis failed');
+    } finally {
+      setAnalyzingVision(false);
+    }
+  };
+
   const handleLogUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!description && !imageFile && !voiceFile) return;
@@ -108,6 +131,7 @@ export const CropHealthLog: React.FC<CropHealthLogProps> = ({ lang }) => {
     try {
       setDiagnosing(true);
       setReferredCase(null);
+      setVisionResult(null);
       
       // Map current question answers to structure required by backend
       const answerPayload = Object.entries(answers).map(([key, val]) => ({
@@ -236,12 +260,24 @@ export const CropHealthLog: React.FC<CropHealthLogProps> = ({ lang }) => {
               </button>
             </div>
 
+            {imagePreview && (
+              <button 
+                type="button"
+                onClick={handleVisionAnalysis}
+                disabled={analyzingVision || uploading}
+                className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1.5 disabled:opacity-50 mb-2 shadow-premium"
+              >
+                <Upload className="h-4 w-4" />
+                {analyzingVision ? 'Gemini Vision analyzing...' : 'Analyze with Gemini Vision (Google AI)'}
+              </button>
+            )}
+
             <button 
               type="submit"
               disabled={uploading}
               className="w-full py-3 bg-nature-600 hover:bg-nature-700 text-white rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5 disabled:opacity-50"
             >
-              {uploading ? 'Processing...' : 'Upload & Analyze Crop'}
+              {uploading ? 'Processing...' : 'Upload & Match Symptoms'}
             </button>
           </form>
         </div>
@@ -303,7 +339,6 @@ export const CropHealthLog: React.FC<CropHealthLogProps> = ({ lang }) => {
         </div>
       </div>
 
-      {/* Diagnosis / Expert System Section */}
       <div className="lg:col-span-2 space-y-6">
         <AnimatePresence mode="wait">
           {diagnosing ? (
@@ -313,6 +348,73 @@ export const CropHealthLog: React.FC<CropHealthLogProps> = ({ lang }) => {
                 Running Vision Model & Symptoms Extraction Engine...
               </p>
             </div>
+          ) : analyzingVision ? (
+            <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/80 rounded-2xl p-8 text-center shadow-premium flex flex-col items-center justify-center min-h-[40vh]">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+              <p className="mt-4 text-sm font-semibold text-gray-600 dark:text-zinc-400">
+                Running Google Gemini Vision Leaf Analysis...
+              </p>
+            </div>
+          ) : visionResult ? (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white dark:bg-zinc-900 border border-gray-150 dark:border-zinc-800 rounded-2xl p-6 shadow-premium space-y-4 text-xs font-semibold"
+            >
+              <div className="border-b border-gray-50 dark:border-zinc-850 pb-4 flex justify-between items-start">
+                <div>
+                  <BadgesGroup badges={['ai', 'google']} />
+                  <h3 className="text-xl font-black text-gray-800 dark:text-zinc-200 mt-2">
+                    {visionResult.ai_disease_name}
+                  </h3>
+                  <p className="text-[10px] text-gray-400 mt-0.5 font-bold">Identified via Google Gemini Vision Model</p>
+                </div>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <span className={`px-2 py-0.5 font-extrabold rounded-full text-[9px] border ${
+                    visionResult.severity === 'Critical' ? 'bg-red-50 text-red-700 border-red-200/50' : 'bg-amber-50 text-amber-700 border-amber-200/50'
+                  }`}>
+                    Severity: {visionResult.severity}
+                  </span>
+                  <span className="text-[9px] font-bold text-gray-400">
+                    Confidence: {visionResult.confidence_level}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-extrabold text-gray-450 uppercase tracking-wider text-[10px] mb-1">
+                    AI Diagnostic Reasoning
+                  </h4>
+                  <p className="leading-relaxed text-gray-700 dark:text-zinc-300 bg-gray-50 dark:bg-zinc-800/40 p-3.5 rounded-xl border border-gray-150/40 font-medium">
+                    {visionResult.ai_reasoning}
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="font-extrabold text-gray-450 uppercase tracking-wider text-[10px] mb-1">
+                    Recommended Treatment Plan
+                  </h4>
+                  <p className="leading-relaxed text-emerald-800 dark:text-emerald-450 bg-emerald-50/20 p-3.5 rounded-xl border border-emerald-100/50 font-medium">
+                    {visionResult.ai_treatment}
+                  </p>
+                </div>
+
+                {visionResult.escalate_to_officer && (
+                  <div className="flex items-start gap-2.5 p-3.5 bg-red-50/20 dark:bg-red-950/15 border border-red-100/50 rounded-xl">
+                    <AlertCircle className="h-5 w-5 text-red-650 shrink-0" />
+                    <div>
+                      <h5 className="font-extrabold text-red-700 dark:text-red-400 text-[11px]">
+                        Escalated to District Agricultural Officer
+                      </h5>
+                      <p className="text-[10px] text-gray-400 mt-0.5 font-medium leading-relaxed">
+                        Due to the severity, a case ticket has been auto-submitted in the system database for review by officer directory.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
           ) : diagnosis ? (
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
@@ -321,7 +423,7 @@ export const CropHealthLog: React.FC<CropHealthLogProps> = ({ lang }) => {
               className="space-y-6"
             >
               {/* Diagnosis Details Card */}
-              <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/80 rounded-2xl p-6 shadow-premium">
+              <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/80 rounded-2xl p-6 shadow-premium text-xs font-semibold">
                 <div className="border-b border-gray-50 dark:border-zinc-800/50 pb-4 mb-4">
                   <span className="text-[10px] uppercase font-bold text-nature-600 tracking-wider">
                     {getTranslation('diagnoseTitle', lang)}
@@ -342,11 +444,11 @@ export const CropHealthLog: React.FC<CropHealthLogProps> = ({ lang }) => {
                     <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
                       {getTranslation('symptoms', lang)}
                     </h4>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-1.5 font-bold">
                       {symptoms.map((sym: string) => (
                         <span 
                           key={sym}
-                          className="text-[10px] font-semibold text-gray-600 dark:text-zinc-300 bg-gray-50 dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700/50 px-2.5 py-1 rounded-lg"
+                          className="text-[10px] text-gray-600 dark:text-zinc-300 bg-gray-50 dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700/50 px-2.5 py-1 rounded-lg"
                         >
                           {sym.replace('_', ' ')}
                         </span>
@@ -355,24 +457,24 @@ export const CropHealthLog: React.FC<CropHealthLogProps> = ({ lang }) => {
                   </div>
 
                   {/* Treatment Recommended */}
-                  <div className="bg-nature-50/50 dark:bg-nature-950/10 p-4 rounded-xl border border-nature-100 dark:border-nature-900/20">
+                  <div className="bg-nature-50/50 dark:bg-nature-950/10 p-4 rounded-xl border border-nature-100 dark:border-nature-900/20 font-medium">
                     <h4 className="text-xs font-bold text-nature-700 dark:text-nature-400 mb-1 flex items-center gap-1.5">
                       <CheckCircle className="h-4 w-4 shrink-0" />
                       {getTranslation('treatment', lang)}
                     </h4>
-                    <p className="text-xs text-gray-700 dark:text-zinc-300 leading-relaxed">
+                    <p className="leading-relaxed">
                       {diagnosis.treatment_recommendation}
                     </p>
                   </div>
 
                   {/* Diagnostic Explanation / Reasoning */}
                   {diagnosis.reasoning && (
-                    <div className="bg-amber-50/50 dark:bg-amber-950/10 p-4 rounded-xl border border-amber-100 dark:border-amber-900/20">
+                    <div className="bg-amber-50/50 dark:bg-amber-950/10 p-4 rounded-xl border border-amber-100 dark:border-amber-900/20 font-medium">
                       <h4 className="text-xs font-bold text-amber-800 dark:text-amber-400 mb-1 flex items-center gap-1.5">
                         <AlertCircle className="h-4 w-4 shrink-0 animate-pulse" />
                         Diagnostic Explanation
                       </h4>
-                      <p className="text-xs text-gray-700 dark:text-zinc-300 leading-relaxed">
+                      <p className="leading-relaxed">
                         {diagnosis.reasoning}
                       </p>
                     </div>
@@ -385,13 +487,13 @@ export const CropHealthLog: React.FC<CropHealthLogProps> = ({ lang }) => {
                 <motion.div 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/80 rounded-2xl p-6 shadow-premium"
+                  className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/80 rounded-2xl p-6 shadow-premium font-semibold"
                 >
                   <h3 className="text-sm font-bold text-gray-800 dark:text-zinc-200 flex items-center gap-2 mb-4">
                     <HelpCircle className="h-4.5 w-4.5 text-nature-600 animate-bounce" />
                     Expert Diagnosis Check: Answer Follow-up Questions
                   </h3>
-                  <p className="text-xs text-gray-400 mb-4 leading-relaxed">
+                  <p className="text-xs text-gray-400 mb-4 leading-relaxed font-medium">
                     Help calibrate prediction. Do you notice any of these additional symptoms?
                   </p>
 
@@ -401,7 +503,7 @@ export const CropHealthLog: React.FC<CropHealthLogProps> = ({ lang }) => {
                         key={q.key} 
                         className="flex items-center justify-between p-3.5 bg-gray-50 dark:bg-zinc-800/40 border border-gray-50 dark:border-zinc-800/40 rounded-xl"
                       >
-                        <span className="text-xs font-semibold text-gray-700 dark:text-zinc-300 pr-4">
+                        <span className="text-xs font-bold text-gray-700 dark:text-zinc-300 pr-4">
                           {lang === 'hi' ? q.text_hi : lang === 'ml' ? q.text_ml : lang === 'te' ? q.text_te : q.text_en}
                         </span>
                         
@@ -444,7 +546,7 @@ export const CropHealthLog: React.FC<CropHealthLogProps> = ({ lang }) => {
               )}
 
               {/* Expert Referral Status */}
-              <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/80 rounded-2xl p-6 shadow-premium">
+              <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/80 rounded-2xl p-6 shadow-premium font-semibold">
                 <h4 className="font-bold text-gray-800 dark:text-zinc-200 text-sm flex items-center gap-2 mb-2">
                   <PhoneCall className="h-4.5 w-4.5 text-purple-600" />
                   Expert Referral Ticket
@@ -456,7 +558,7 @@ export const CropHealthLog: React.FC<CropHealthLogProps> = ({ lang }) => {
                       <CheckCircle className="h-4 w-4 shrink-0" />
                       Ticket successfully filed under Officer Queue
                     </div>
-                    <p className="text-[10px] text-gray-500 dark:text-zinc-400 mt-1">
+                    <p className="text-[10px] text-gray-500 dark:text-zinc-400 mt-1 font-medium leading-relaxed">
                       Case ID: <span className="font-bold">{diagnosis.case_id || referredCase?.case_id}</span>. 
                       An Agricultural Officer will review the file symptoms and log remarks shortly.
                     </p>
@@ -469,7 +571,7 @@ export const CropHealthLog: React.FC<CropHealthLogProps> = ({ lang }) => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <p className="text-xs text-gray-400 leading-relaxed">
+                    <p className="text-xs text-gray-400 leading-relaxed font-medium">
                       AI diagnostic confidence is high, but if you notice that recommendations do not align with symptoms, you may manually refer this crop case to an officer directory.
                     </p>
                     <button 
@@ -487,7 +589,7 @@ export const CropHealthLog: React.FC<CropHealthLogProps> = ({ lang }) => {
             <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/80 rounded-2xl p-8 text-center shadow-premium flex flex-col items-center justify-center min-h-[50vh]">
               <AlertCircle className="h-12 w-12 text-gray-300 mb-3" />
               <h3 className="text-md font-bold text-gray-800 dark:text-zinc-200">No active diagnosis report</h3>
-              <p className="text-xs text-gray-400 mt-1 max-w-sm">
+              <p className="text-xs text-gray-400 mt-1 max-w-sm font-semibold">
                 Upload crop logs containing leaf images or descriptions to run the symptom engine.
               </p>
             </div>

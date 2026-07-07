@@ -197,3 +197,48 @@ class FarmerMessageResponse(BaseModel):
 class OfficerReplyInput(BaseModel):
     reply: str = Field(..., min_length=2, max_length=2000, description="Officer's reply to the farmer")
 
+# --- HACKATHON ENHANCEMENT SCHEMAS ---
+
+class ActionPlanItem(BaseModel):
+    day: int
+    action: str
+
+class GeminiAdvisoryResponse(BaseModel):
+    recommendation: str
+    why: str
+    potential_risks: List[str]
+    expected_benefits: List[str]
+    advisory_strength: str
+    evidence_sources: List[str]
+    action_plan: List[ActionPlanItem]
+
+class VisionDiagnosisResponse(BaseModel):
+    ai_disease_name: str
+    severity: str
+    confidence_level: str
+    ai_treatment: str
+    ai_reasoning: str
+    escalate_to_officer: bool
+
+class ImpactCalculatorResponse(BaseModel):
+    yield_increase_pct: int
+    water_savings_pct: int
+    disease_reduction_pct: int
+    profit_increase_inr: int
+
+class DistrictIntelligenceResponse(BaseModel):
+    daily_summary: str
+    top_risk_districts: List[str]
+    disease_hotspots: List[str]
+    weather_impact_analysis: str
+    recommended_government_actions: List[str]
+    farmer_outreach_priority: List[str]
+
+class SystemAnalyticsResponse(BaseModel):
+    total_farmers: int
+    active_alerts: int
+    diseases_prevented: int
+    estimated_yield_improvement_pct: int
+    advisories_generated: int
+
+

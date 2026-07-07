@@ -63,6 +63,10 @@ class DiagnosisCase(Base):
     priority = Column(String, default="Medium") # "Low", "Medium", "High", "Critical"
     assigned_officer_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     officer_remarks = Column(String, default="")
+    ai_disease_name = Column(String, nullable=True)
+    ai_confidence = Column(Float, nullable=True)
+    ai_reasoning = Column(String, nullable=True)
+    ai_treatment = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 class AlertHistory(Base):
