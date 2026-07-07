@@ -223,4 +223,17 @@ export const api = {
   async getSystemAnalytics() {
     return apiRequest('/api/analytics/system-metrics');
   },
+
+  // Server-Side Text-to-Speech
+  async generateTTSAudio(payload: { text: string; language: string }) {
+    return apiRequest('/api/tts/generate', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  getTTSAudioUrl(relativePath: string) {
+    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    return `${API_BASE}${relativePath}`;
+  },
 };

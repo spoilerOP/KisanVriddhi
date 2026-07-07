@@ -47,3 +47,7 @@ logs/
 
 # Docker volumes
 data/
+
+# TTS audio cache
+tts_cache/
+backend/tts_cache/

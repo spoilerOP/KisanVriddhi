@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 import { getTranslation } from '../utils/translate';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, MicOff, Volume2, VolumeX, Sparkles, Send, RefreshCw, AlertTriangle, ArrowRight, Terminal } from 'lucide-react';
+import { Mic, MicOff, Volume2, VolumeX, Sparkles, Send, RefreshCw, AlertTriangle, ArrowRight, Download, Loader2, CheckCircle2 } from 'lucide-react';
 import { Badge, BadgesGroup } from './Badges';
 
 interface VoiceAssistantProps {
@@ -17,16 +17,12 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ lang }) => {
   const [loading, setLoading] = useState(false);
   const [speechEnabled, setSpeechEnabled] = useState(true);
 
-  // Queue state variables for TTS
-  const [currentChunkIndex, setCurrentChunkIndex] = useState<number>(-1);
-  const [totalChunksCount, setTotalChunksCount] = useState<number>(0);
-  const [speakingStatus, setSpeakingStatus] = useState<string>('idle'); // 'speaking', 'complete', 'idle'
-  const [speakingProgress, setSpeakingProgress] = useState<string>('');
-  const [availableVoices, setAvailableVoices] = useState<any[]>([]);
-  const [selectedVoiceInfo, setSelectedVoiceInfo] = useState<{ name: string; lang: string } | null>(null);
-  const [voiceWarning, setVoiceWarning] = useState<string>('');
-  const chunksRef = useRef<string[]>([]);
-  const isSpeakingRef = useRef<boolean>(false);
+  // Server-side TTS state
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [generatingAudio, setGeneratingAudio] = useState(false);
+  const [audioError, setAudioError] = useState<string>('');
+  const [audioStatus, setAudioStatus] = useState<'idle' | 'generating' | 'playing' | 'complete' | 'error'>('idle');
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   let recognition: any = null;
   if ('webkitSpeechRecognition' in window) {
@@ -39,7 +35,6 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ lang }) => {
 
   const startListening = () => {
     if (!recognition) {
-      // Simulate speech for unsupported browsers
       setRecognizing(true);
       setTranscript('Listening...');
       setTimeout(() => {
@@ -59,27 +54,19 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ lang }) => {
 
     setTranscript('');
     setAiResponse(null);
-    stopSpeaking();
-    
-    recognition.onstart = () => {
-      setRecognizing(true);
-    };
+    stopAudio();
 
+    recognition.onstart = () => setRecognizing(true);
     recognition.onerror = (event: any) => {
       console.error("Speech recognition error", event);
       setRecognizing(false);
     };
-
-    recognition.onend = () => {
-      setRecognizing(false);
-    };
-
+    recognition.onend = () => setRecognizing(false);
     recognition.onresult = (event: any) => {
       const resultText = event.results[0][0].transcript;
       setTranscript(resultText);
       handleSendQuery(resultText);
     };
-
     recognition.start();
   };
 
@@ -87,12 +74,15 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ lang }) => {
     if (!queryText.trim()) return;
     try {
       setLoading(true);
+      setAudioUrl(null);
+      setAudioError('');
+      setAudioStatus('idle');
       const res = await api.sendGeminiMessage({ message: queryText, language: lang });
       setAiResponse(res);
-      
-      // Auto TTS response
+
+      // Auto-generate server TTS if speech is enabled
       if (speechEnabled) {
-        speakText(getSpeakableText(res));
+        await generateAndPlayAudio(res);
       }
     } catch (err: any) {
       console.error(err);
@@ -132,209 +122,116 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ lang }) => {
     return fullText;
   };
 
-  const splitTextIntoChunks = (text: string): string[] => {
-    // Split sentences using punctuation boundaries across scripts (. ? ! ।)
-    const sentenceRegex = /[^.!?।]+[.!?।]+/g;
-    const matches = text.match(sentenceRegex);
-    
-    if (!matches) {
-      // Chunk by fixed sizes if no punctuation matches
-      const chunks: string[] = [];
-      let remaining = text;
-      while (remaining.length > 0) {
-        chunks.push(remaining.substring(0, 160));
-        remaining = remaining.substring(160);
-      }
-      return chunks.filter(c => c.trim().length > 0);
+  const generateAndPlayAudio = async (res: any) => {
+    const text = getSpeakableText(res);
+    if (!text.trim()) return;
+
+    try {
+      setGeneratingAudio(true);
+      setAudioStatus('generating');
+      setAudioError('');
+
+      console.log("=== SERVER TTS AUDIT ===");
+      console.log("Language:", lang);
+      console.log("Text length:", text.length);
+
+      const ttsResponse = await api.generateTTSAudio({ text, language: lang });
+      const fullAudioUrl = api.getTTSAudioUrl(ttsResponse.audio_url);
+      setAudioUrl(fullAudioUrl);
+
+      console.log("Audio URL:", fullAudioUrl);
+      console.log("Cached:", ttsResponse.cached);
+
+      // Auto-play the generated audio
+      playAudioFromUrl(fullAudioUrl);
+    } catch (err: any) {
+      console.error("TTS generation error:", err);
+      setAudioError(err.message || "Failed to generate audio.");
+      setAudioStatus('error');
+    } finally {
+      setGeneratingAudio(false);
     }
-    
-    const chunks: string[] = [];
-    let currentChunk = "";
-    for (const sentence of matches) {
-      if ((currentChunk + sentence).length > 170) {
-        if (currentChunk.trim()) {
-          chunks.push(currentChunk.trim());
-        }
-        currentChunk = sentence;
-      } else {
-        currentChunk += sentence;
-      }
-    }
-    if (currentChunk.trim()) {
-      chunks.push(currentChunk.trim());
-    }
-    return chunks;
   };
 
-  const getOptimalVoice = (targetLang: string) => {
-    if (!('speechSynthesis' in window)) return null;
-    const voices = window.speechSynthesis.getVoices();
-    
-    // 1. Exact locale matching (e.g. 'ml-IN')
-    let matched = voices.find(v => v.lang.toLowerCase() === targetLang.toLowerCase());
-    
-    // 2. Prefix matching (e.g. starts with 'ml')
-    if (!matched) {
-      const prefix = targetLang.split('-')[0].toLowerCase();
-      matched = voices.find(v => v.lang.toLowerCase().startsWith(prefix));
-    }
-    
-    return matched;
-  };
+  const playAudioFromUrl = (url: string) => {
+    stopAudio();
 
-  const speakText = (text: string) => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      setVoiceWarning('');
-      
-      const targetLang = lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : lang === 'ml' ? 'ml-IN' : 'en-IN';
-      const selectedVoice = getOptimalVoice(targetLang);
+    const audio = new Audio(url);
+    audioRef.current = audio;
 
-      // Audit logs (Requirement 3)
-      console.log("=== TTS LANGUAGE AUDIT ===");
-      console.log("Selected language:", lang);
-      console.log("Selected voice:", selectedVoice?.name || "None");
-      console.log("Voice locale:", selectedVoice?.lang || "N/A");
-      console.log("Text being spoken:", text);
-
-      // Prevent English fallback for non-English languages (Requirement 2 / 7)
-      if (lang !== 'en' && !selectedVoice) {
-        const langNames: Record<string, string> = {
-          hi: 'Hindi',
-          ml: 'Malayalam',
-          te: 'Telugu'
-        };
-        const errMsg = `${langNames[lang] || lang} voice not available on this device.`;
-        setVoiceWarning(errMsg);
-        setSpeakingStatus('complete');
-        setSpeakingProgress(errMsg);
-        setSpeaking(false);
-        isSpeakingRef.current = false;
-        return;
-      }
-
-      if (selectedVoice) {
-        setSelectedVoiceInfo({ name: selectedVoice.name, lang: selectedVoice.lang });
-      } else {
-        setSelectedVoiceInfo(null);
-      }
-
-      isSpeakingRef.current = true;
-      const cleanText = text.replace(/\*\*/g, '').replace(/[\#\*\_]/g, ' ');
-      const chunks = splitTextIntoChunks(cleanText);
-      chunksRef.current = chunks;
-      
-      console.log("=== TTS AUDIT LOG ===");
-      console.log(`Total advisory character count: ${cleanText.length}`);
-      console.log(`Number of speech chunks: ${chunks.length}`);
-      console.log("Speech chunks payload:", chunks);
-
-      if (chunks.length === 0) {
-        setSpeakingStatus('complete');
-        setSpeakingProgress('Speech Complete');
-        setSpeaking(false);
-        isSpeakingRef.current = false;
-        return;
-      }
-
-      setSpeakingStatus('speaking');
+    audio.onplay = () => {
       setSpeaking(true);
-      setTotalChunksCount(chunks.length);
-      
-      speakChunk(0);
-    }
+      setAudioStatus('playing');
+    };
+
+    audio.onended = () => {
+      setSpeaking(false);
+      setAudioStatus('complete');
+    };
+
+    audio.onerror = (e) => {
+      console.error("Audio playback error:", e);
+      setSpeaking(false);
+      setAudioError("Audio playback failed.");
+      setAudioStatus('error');
+    };
+
+    audio.play().catch((err) => {
+      console.warn("Auto-play blocked by browser:", err);
+      setSpeaking(false);
+      setAudioStatus('idle');
+    });
   };
 
-  const speakChunk = (index: number) => {
-    if (!isSpeakingRef.current) return;
-    
-    if (index >= chunksRef.current.length) {
-      console.log("=== TTS AUDIT LOG ===");
-      console.log("Speech completion status: SUCCESS (All chunks completed)");
-      setSpeakingStatus('complete');
-      setSpeakingProgress('Speech Complete');
-      setSpeaking(false);
-      isSpeakingRef.current = false;
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+    }
+    setSpeaking(false);
+    setAudioStatus('idle');
+  };
+
+  const handlePlayButton = async () => {
+    if (speaking) {
+      stopAudio();
       return;
     }
 
-    const chunkText = chunksRef.current[index];
-    console.log(`Current chunk being spoken: ${index + 1} of ${chunksRef.current.length}`);
-    console.log(`Chunk text: "${chunkText}"`);
-    
-    setSpeakingProgress(`Speaking chunk ${index + 1} of ${chunksRef.current.length}...`);
-    setCurrentChunkIndex(index);
-
-    const utterance = new SpeechSynthesisUtterance(chunkText);
-    const targetLang = lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : lang === 'ml' ? 'ml-IN' : 'en-IN';
-    
-    const selectedVoice = getOptimalVoice(targetLang);
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
-    }
-
-    // Explicitly enforce target lang on utterance (Requirement 4)
-    utterance.lang = targetLang;
-    utterance.rate = 0.90; // Clear, slower pacing
-    utterance.pitch = 1.0;
-
-    utterance.onend = () => {
-      speakChunk(index + 1);
-    };
-
-    utterance.onerror = (e) => {
-      console.warn(`SpeechSynthesis error on chunk index ${index}:`, e);
-      speakChunk(index + 1);
-    };
-
-    window.speechSynthesis.speak(utterance);
-  };
-
-  const stopSpeaking = () => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      isSpeakingRef.current = false;
-      chunksRef.current = [];
-      setSpeaking(false);
-      setSpeakingStatus('idle');
-      setSpeakingProgress('');
+    if (audioUrl) {
+      // Replay cached audio
+      playAudioFromUrl(audioUrl);
+    } else if (aiResponse) {
+      // Generate fresh audio
+      await generateAndPlayAudio(aiResponse);
     }
   };
 
-  // Load and subscribe asynchronously to browser voices (Requirement 6)
-  const loadVoicesList = () => {
-    if ('speechSynthesis' in window) {
-      const voices = window.speechSynthesis.getVoices();
-      setAvailableVoices(voices);
-      console.log("=== TTS VOICES LOADED ===");
-      voices.forEach((v, i) => {
-        console.log(`Voice ${i + 1}: ${v.name} (${v.lang}) ${v.default ? '[DEFAULT]' : ''}`);
-      });
-    }
-  };
-
-  useEffect(() => {
-    if ('speechSynthesis' in window) {
-      loadVoicesList();
-      window.speechSynthesis.onvoiceschanged = () => {
-        loadVoicesList();
-      };
-    }
-  }, []);
-
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
       }
     };
   }, []);
+
+  const getLangLabel = () => {
+    switch (lang) {
+      case 'hi': return 'Hindi';
+      case 'ml': return 'Malayalam';
+      case 'te': return 'Telugu';
+      default: return 'English';
+    }
+  };
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/80 rounded-2xl p-6 shadow-premium relative overflow-hidden text-center">
         <div className="absolute right-3 top-3">
-          <button 
+          <button
             onClick={() => setSpeechEnabled(!speechEnabled)}
             className={`p-2.5 rounded-xl border transition ${
               speechEnabled ? 'bg-nature-50 border-nature-200 text-nature-600' : 'bg-gray-50 border-gray-150 text-gray-400'
@@ -349,7 +246,7 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ lang }) => {
           <div className="bg-gradient-to-br from-nature-500/10 to-nature-600/5 p-4 rounded-full border border-nature-500/10 mb-2">
             <h2 className="text-xl font-black text-gray-800 dark:text-zinc-200 flex items-center gap-1.5 justify-center">
               <Sparkles className="h-5.5 w-5.5 text-nature-600 animate-pulse" />
-              KisanVriddhi Voice advisory
+              KisanVriddhi Voice Advisory
             </h2>
             <p className="text-xs text-gray-400 mt-1 font-semibold">Speak in Hindi, Telugu, Malayalam, or English</p>
           </div>
@@ -359,14 +256,14 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ lang }) => {
             <AnimatePresence>
               {recognizing && (
                 <>
-                  <motion.span 
+                  <motion.span
                     initial={{ scale: 0.8, opacity: 0.5 }}
                     animate={{ scale: 1.8, opacity: 0 }}
                     exit={{ opacity: 0 }}
                     transition={{ repeat: Infinity, duration: 1.5, ease: 'easeOut' }}
                     className="absolute inset-0 bg-nature-500 rounded-full"
                   />
-                  <motion.span 
+                  <motion.span
                     initial={{ scale: 0.8, opacity: 0.5 }}
                     animate={{ scale: 1.4, opacity: 0 }}
                     exit={{ opacity: 0 }}
@@ -381,8 +278,8 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ lang }) => {
               onClick={recognizing ? () => {} : startListening}
               disabled={loading}
               className={`h-20 w-20 rounded-full flex items-center justify-center transition shadow-lg relative z-10 ${
-                recognizing 
-                  ? 'bg-red-500 text-white' 
+                recognizing
+                  ? 'bg-red-500 text-white'
                   : 'bg-nature-600 hover:bg-nature-700 text-white hover:scale-105'
               }`}
             >
@@ -424,80 +321,118 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ lang }) => {
                   Voice Advisory Report
                 </h3>
               </div>
-              
-              <div className="flex gap-2">
-                {speaking ? (
-                  <button 
-                    onClick={stopSpeaking}
+
+              <div className="flex gap-2 items-center">
+                {generatingAudio ? (
+                  <div className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-50 text-amber-700 border border-amber-200/50 rounded-xl text-[11px] font-extrabold">
+                    <Loader2 size={14} className="animate-spin" /> Generating Audio...
+                  </div>
+                ) : speaking ? (
+                  <button
+                    onClick={stopAudio}
                     className="flex items-center gap-1.5 px-3.5 py-2 bg-red-50 text-red-650 hover:bg-red-100 border border-red-200/50 rounded-xl text-[11px] font-extrabold transition animate-pulse"
                   >
-                    <VolumeX size={14} /> Stop Speech Readout
+                    <VolumeX size={14} /> Stop Playback
                   </button>
                 ) : (
-                  <button 
-                    onClick={() => speakText(getSpeakableText(aiResponse))}
+                  <button
+                    onClick={handlePlayButton}
                     className="flex items-center gap-1.5 px-3.5 py-2 bg-nature-50 text-nature-600 hover:bg-nature-100 border border-nature-200/50 rounded-xl text-[11px] font-extrabold transition"
                   >
                     <Volume2 size={14} /> Play Speech Readout
                   </button>
                 )}
+
+                {audioUrl && (
+                  <a
+                    href={audioUrl}
+                    download
+                    className="flex items-center gap-1 px-3 py-2 bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-150/50 rounded-xl text-[11px] font-extrabold transition"
+                    title="Download MP3"
+                  >
+                    <Download size={13} />
+                  </a>
+                )}
               </div>
             </div>
 
-            {/* TTS Diagnostic Panel */}
-            <div className="bg-gray-50 dark:bg-zinc-800/40 p-4 rounded-xl border border-gray-150/50 space-y-2.5">
-              <h4 className="font-extrabold text-[10px] uppercase text-gray-400 tracking-wider flex items-center gap-1.5">
-                <Terminal className="h-3.5 w-3.5 text-nature-600" />
-                Speech Synthesis Diagnostic Panel
-              </h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-[11px] font-bold">
-                <div className="bg-white dark:bg-zinc-900 p-2.5 rounded-lg border border-gray-150/40">
-                  <span className="text-[9px] text-gray-400 block uppercase">Target Language</span>
-                  <span className="text-gray-800 dark:text-zinc-200 uppercase">{lang === 'hi' ? 'Hindi (hi-IN)' : lang === 'te' ? 'Telugu (te-IN)' : lang === 'ml' ? 'Malayalam (ml-IN)' : 'English (en-IN)'}</span>
-                </div>
-                <div className="bg-white dark:bg-zinc-900 p-2.5 rounded-lg border border-gray-150/40">
-                  <span className="text-[9px] text-gray-400 block uppercase">Selected Voice</span>
-                  <span className={`truncate block ${selectedVoiceInfo ? 'text-gray-800 dark:text-zinc-200' : 'text-red-600 dark:text-red-400'}`}>
-                    {selectedVoiceInfo?.name || 'None Selected'}
-                  </span>
-                </div>
-                <div className="bg-white dark:bg-zinc-900 p-2.5 rounded-lg border border-gray-150/40">
-                  <span className="text-[9px] text-gray-400 block uppercase">Voice Locale</span>
-                  <span className="text-gray-800 dark:text-zinc-200 block truncate">{selectedVoiceInfo?.lang || 'N/A'}</span>
-                </div>
-                <div className="bg-white dark:bg-zinc-900 p-2.5 rounded-lg border border-gray-150/40">
-                  <span className="text-[9px] text-gray-400 block uppercase">Installed Voices</span>
-                  <span className="text-gray-800 dark:text-zinc-200">{availableVoices.length} voices</span>
-                </div>
-              </div>
-
-              {voiceWarning && (
-                <div className="bg-red-50/50 dark:bg-red-950/10 border border-red-200/30 p-3 rounded-lg text-red-650 flex items-start gap-2">
-                  <AlertTriangle className="h-4.5 w-4.5 shrink-0" />
-                  <div>
-                    <p className="font-extrabold text-[11px]">{voiceWarning}</p>
-                    <p className="text-[9px] text-gray-450 leading-relaxed font-semibold mt-0.5">
-                      Please install the speech synthesis language pack for {lang === 'hi' ? 'Hindi' : lang === 'te' ? 'Telugu' : lang === 'ml' ? 'Malayalam' : 'English'} in your operating system or browser settings.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {speakingProgress && (
-              <div className="bg-nature-50/30 dark:bg-nature-950/15 border border-nature-200/20 rounded-xl p-3.5 flex items-center justify-between">
-                <span className="text-[11px] font-bold text-nature-700 dark:text-nature-400 flex items-center gap-2">
+            {/* Audio Status Banner */}
+            {audioStatus !== 'idle' && (
+              <div className={`rounded-xl p-3.5 flex items-center justify-between border ${
+                audioStatus === 'generating' ? 'bg-amber-50/30 dark:bg-amber-950/10 border-amber-200/20' :
+                audioStatus === 'playing' ? 'bg-nature-50/30 dark:bg-nature-950/15 border-nature-200/20' :
+                audioStatus === 'complete' ? 'bg-emerald-50/30 dark:bg-emerald-950/10 border-emerald-200/20' :
+                'bg-red-50/30 dark:bg-red-950/10 border-red-200/20'
+              }`}>
+                <span className="text-[11px] font-bold flex items-center gap-2">
                   <span className="flex h-2.5 w-2.5 relative">
-                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${speakingStatus === 'speaking' ? 'bg-nature-500' : 'bg-emerald-500'}`}></span>
-                    <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${speakingStatus === 'speaking' ? 'bg-nature-600' : 'bg-emerald-600'}`}></span>
+                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                      audioStatus === 'generating' ? 'bg-amber-500' :
+                      audioStatus === 'playing' ? 'bg-nature-500' :
+                      audioStatus === 'complete' ? 'bg-emerald-500' : 'bg-red-500'
+                    }`}></span>
+                    <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                      audioStatus === 'generating' ? 'bg-amber-600' :
+                      audioStatus === 'playing' ? 'bg-nature-600' :
+                      audioStatus === 'complete' ? 'bg-emerald-600' : 'bg-red-600'
+                    }`}></span>
                   </span>
-                  {speakingStatus === 'speaking' ? 'Speaking Readout...' : 'Readout Complete'}
+                  <span className={
+                    audioStatus === 'generating' ? 'text-amber-700 dark:text-amber-400' :
+                    audioStatus === 'playing' ? 'text-nature-700 dark:text-nature-400' :
+                    audioStatus === 'complete' ? 'text-emerald-700 dark:text-emerald-400' :
+                    'text-red-700 dark:text-red-400'
+                  }>
+                    {audioStatus === 'generating' && 'Generating Audio...'}
+                    {audioStatus === 'playing' && 'Playing Audio...'}
+                    {audioStatus === 'complete' && 'Playback Complete'}
+                    {audioStatus === 'error' && 'Playback Error'}
+                  </span>
                 </span>
                 <span className="text-[10px] font-black text-gray-500 dark:text-zinc-400">
-                  {speakingProgress}
+                  {audioStatus === 'generating' ? 'Server-side TTS (gTTS)' :
+                   audioStatus === 'playing' ? `${getLangLabel()} • MP3 Audio` :
+                   audioStatus === 'complete' ? 'Ready to replay' :
+                   audioError}
                 </span>
               </div>
             )}
+
+            {audioError && audioStatus === 'error' && (
+              <div className="bg-red-50/50 dark:bg-red-950/10 border border-red-200/30 p-3 rounded-lg text-red-650 flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-extrabold text-[11px]">{audioError}</p>
+                  <p className="text-[9px] text-gray-450 leading-relaxed font-semibold mt-0.5">
+                    Please check your internet connection and try again.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Server TTS Info Panel */}
+            <div className="bg-gray-50 dark:bg-zinc-800/40 p-3.5 rounded-xl border border-gray-150/50">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-[11px] font-bold">
+                <div className="bg-white dark:bg-zinc-900 p-2.5 rounded-lg border border-gray-150/40">
+                  <span className="text-[9px] text-gray-400 block uppercase">TTS Engine</span>
+                  <span className="text-gray-800 dark:text-zinc-200">Server (gTTS)</span>
+                </div>
+                <div className="bg-white dark:bg-zinc-900 p-2.5 rounded-lg border border-gray-150/40">
+                  <span className="text-[9px] text-gray-400 block uppercase">Language</span>
+                  <span className="text-gray-800 dark:text-zinc-200">{getLangLabel()}</span>
+                </div>
+                <div className="bg-white dark:bg-zinc-900 p-2.5 rounded-lg border border-gray-150/40">
+                  <span className="text-[9px] text-gray-400 block uppercase">Format</span>
+                  <span className="text-gray-800 dark:text-zinc-200">MP3 Audio</span>
+                </div>
+                <div className="bg-white dark:bg-zinc-900 p-2.5 rounded-lg border border-gray-150/40">
+                  <span className="text-[9px] text-gray-400 block uppercase">Compatibility</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <CheckCircle2 size={11} /> All Devices
+                  </span>
+                </div>
+              </div>
+            </div>
 
             <div className="space-y-4">
               <div className="bg-nature-50/30 dark:bg-nature-950/15 p-4 rounded-xl border border-nature-200/40">
@@ -521,7 +456,7 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ lang }) => {
 
                 <div className="bg-gray-50/50 dark:bg-zinc-850 p-4 rounded-xl border border-gray-150/40 space-y-3">
                   <h4 className="font-extrabold text-gray-450 text-[10px] uppercase">
-                    7-Day Mitigations Action timeline
+                    7-Day Mitigations Action Timeline
                   </h4>
                   <div className="space-y-2.5 font-bold">
                     {aiResponse.action_plan.slice(0, 3).map((act: any, idx: number) => (

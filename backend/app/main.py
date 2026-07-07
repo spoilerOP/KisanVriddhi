@@ -8,7 +8,7 @@ from app.config import settings
 from app.database import engine, Base
 # Import models to ensure they are registered for create_all
 from app import models
-from app.routers import auth, farmers, crops, weather, cases, assistant, officer, gemini_advisory, officer_ai, impact, analytics
+from app.routers import auth, farmers, crops, weather, cases, assistant, officer, gemini_advisory, officer_ai, impact, analytics, tts
 
 # Initialize Database tables
 Base.metadata.create_all(bind=engine)
@@ -81,6 +81,7 @@ app.include_router(gemini_advisory.router)
 app.include_router(officer_ai.router)
 app.include_router(impact.router)
 app.include_router(analytics.router)
+app.include_router(tts.router)
 
 @app.get("/")
 def read_root():
