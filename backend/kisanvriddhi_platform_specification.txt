@@ -1,0 +1,150 @@
+================================================================================
+KISANVRIDDHI PLATFORM SPECIFICATION
+End-to-End AI-Powered Agricultural Decision Support Intelligence
+================================================================================
+
+Metadata
+--------------------------------------------------------------------------------
+Author:       Antigravity Coding Assistant
+Target:       Google AI Hackathon
+Tech Stack:   FastAPI, React, Gemini AI, gTTS
+Status:       Production Ready
+Date:         July 2026
+
+--------------------------------------------------------------------------------
+1. Executive Summary
+--------------------------------------------------------------------------------
+KisanVriddhi is a comprehensive digital agritech ecosystem designed to help Indian
+farmers navigate changing weather risks and maximize crop outcomes through cutting-edge
+AI. Built to directly align with the core evaluation metrics of the Google AI Hackathon,
+the platform avoids displaying static spreadsheets, transforming real-world sensor streams
+and API data into fully personalized, multilingual action checklists. Through direct
+officer integration, the platform also scales state-wide interventions, allowing government
+agricultural extension agronomists to manage crop alerts, track outbreaks, and deploy
+target field visits seamlessly.
+
+--------------------------------------------------------------------------------
+2. Core Platform Features
+--------------------------------------------------------------------------------
+
+• Digital Farm Profile
+  The foundation of KisanVriddhi personalization. Captures soil type (Loamy, Clay,
+  Alluvial, Black, Sandy), soil pH (0-14, supporting fine matching), land size (in acres),
+  groundwater table depth, preferred local language (English, Hindi, Malayalam, Telugu),
+  and crop cultivation history. This profile guarantees all advice is tailored to the
+  exact physical attributes of the farmer's land.
+
+• Farmer Intelligence Dashboard
+  A real-time overview hub showing active smart weather alerts, risk gauges (Weather,
+  Water, Disease, and Overall Risk Index), crop statistics, and recent case files. High-
+  severity alerts appear as dynamic, animated banners on top, with actionable steps mapped
+  directly on-screen.
+
+• Weather Intelligence Center
+  A flagship weather engine that replaces static rain/temp displays with agricultural
+  analysis. Connects to real-time Open-Meteo forecasts to fetch apparent temperatures,
+  UV indexes, cloud covers, and sunrise/sunset times. Renders WMO symbol status cards for
+  a 7-day outlook, tagging each day with a suitability rating (Good for Farming, Use
+  Caution, or High Risk). Uses Gemini AI to calculate a 6-dimension risk assessment
+  (Crop Stress, Disease, Waterlogging, Irrigation Need, Heatwave, and Pest Outbreak) along
+  with personalized crop recommendations and protected impact estimates (water saved,
+  yield protected, diseases prevented, and profit preserved).
+
+• Multilingual Voice Assistant & Server TTS
+  Empowers farmers of all literacy levels. Integrated with Web Speech recognition mapping
+  Indic locales (en-IN, hi-IN, ml-IN, te-IN). Advisory readouts are generated entirely
+  server-side using gTTS (Google Translate TTS). The backend converts text into cached MP3
+  files (using SHA-256 content hashes to bypass redundant generation), which the frontend
+  plays back using standard HTML5 Audio. This ensures identical, high-fidelity audio readouts
+  across iOS, Android, Windows, and macOS without requiring local OS language packs.
+
+• Gemini AI Personalized Assistant
+  A specialized chat interface connected to the farmer's soil context and history.
+  Implements strict Indic language enforcement rules (Hindi, Telugu, Malayalam, English)
+  ensuring responses never switch mid-conversation. Provides a structured 7-day action
+  timeline, confidence scores, and evidence sources for every agronomist recommendation.
+
+• AI Crop Recommendation Engine
+  An intelligent crop selection module. Calibrates local weather, land size, and soil
+  parameters against optimized crop profiles. Renders a confidence percentage match, a
+  detailed yield breakdown, and risk factors. Includes a comparative matrix that showcases
+  parameters alongside secondary crops to allow farmers to select the most profitable options.
+
+• Multimodal Crop Disease Diagnoses (Gemini Vision)
+  Farmers upload leaves directly from fields. The frontend prompts for additional spoken
+  descriptions (Whisper simulated processing). The server-side Gemini 2.5 Flash Vision model
+  performs multimodal structural analysis, extracting symptoms (rust, leaf curling, spots)
+  and generating immediate treatment recommendations (chemical names, biological controls).
+  High-severity diagnoses are automatically escalated into CRM case tickets.
+
+• CRM Agricultural Officer Command Console
+  A comprehensive management portal for government extension agronomists. Tracks district
+  case queues (Pending, In Progress, Resolved) and allows officers to add remarks, prescribe
+  treatments, and assign field visits. Includes a Gemini District Copilot Center that
+  aggregates active complaints and alerts to generate automated government action checklists,
+  weather vulnerability indexes, and prioritized farmer mobile outcalls.
+
+• System Analytics Hub
+  Provides overall system health charts. Leverages Recharts to render crop distribution
+  percentages, weather alert frequencies (Dry Spell, Heatwave, Storm), active case trends,
+  and total yields protected, showing the platform's macro scalability.
+
+• Guided Judge Walkthrough & Tech Showcase
+  Specially designed for hackathon evaluation. The Judge walkthrough offers a step-by-step
+  evaluation workflow (Critical/Medium/Healthy profiles, weather impact triggers, Gemini
+  Vision uploads, and officer audits). The Tech Showcase explains the multi-layered stack,
+  offline-fallbacks, and database schemas under the hood.
+
+--------------------------------------------------------------------------------
+3. Technical Architecture Specification
+--------------------------------------------------------------------------------
+
+Backend API Architecture (FastAPI)
+• FastAPI Framework: Asynchronous REST APIs with automatic OpenAPI (Swagger) schema
+  validation.
+• Security Hardening: Enforces strict security headers (nosniff, frame-ancestors, CSP,
+  XSS protection). Implements Bearer token auth stored in secure HttpOnly cookies to
+  prevent client-side token leaks.
+• Database (SQLite + SQLAlchemy): Relation schemas mapping users, farmer profiles, alert
+  logs, diagnosis cases, and chat records.
+• Gemini AI Integration: Server-side wrapper connecting to Gemini 2.5 Flash (Text/Vision)
+  with automatic failover fallback to Gemini 2.0 Flash to guarantee service continuity.
+• Server TTS Engine: gTTS module producing high-quality MP3s served with Cache-Control
+  headers. The audio endpoints are protected from path-traversal vulnerability attacks.
+
+Frontend Architecture (React + Vite)
+• React (TypeScript): Structured component tree separating dashboards, assistants, and
+  centers.
+• Aesthetics & UI: Premium glassmorphism effects, Tailwind CSS, Outfit typography, and
+  dynamic framer-motion micro-animations.
+• HTML5 Audio: Audio readouts streamed from /api/tts/audio/{filename} directly via
+  standard browser media streams, removing OS voice dependencies.
+• Responsive Layout: Mobile-first layouts optimized for Indian farmers using affordable
+  Android smartphones.
+
+--------------------------------------------------------------------------------
+4. Platform Comparison Matrix
+--------------------------------------------------------------------------------
+
++----------------------+-----------------------------+------------------------------------+
+| Feature Checklist    | Traditional Agritech        | KisanVriddhi Platform              |
++----------------------+-----------------------------+------------------------------------+
+| Weather Advisories   | Static 3-day forecast       | AI Risk analysis + Personalized    |
+|                      | numbers                     | Advice                             |
++----------------------+-----------------------------+------------------------------------+
+| Indic Readouts       | OS Voice-dependent          | Server MP3 generation              |
+|                      | (gibberish default)         | (All Devices)                      |
++----------------------+-----------------------------+------------------------------------+
+| Pest & Disease       | Manual identification       | Gemini Vision Diagnostic +         |
+|                      | checklists                  | Escalation                         |
++----------------------+-----------------------------+------------------------------------+
+| Officer Support      | Static list of local        | Interactive CRM Case Ticketing     |
+|                      | offices                     | & Briefs                           |
++----------------------+-----------------------------+------------------------------------+
+| Indic Languages      | English only text layouts   | EN, HI, ML, TE complete            |
+|                      |                             | translation                        |
++----------------------+-----------------------------+------------------------------------+
+
+================================================================================
+CONFIDENTIAL — FOR DEMONSTRATION & REVIEW ONLY
+================================================================================
