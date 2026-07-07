@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     MAX_FILE_SIZE_BYTES: int = 5 * 1024 * 1024  # 5MB limits
 
     class Config:
-        env_file = ".env"
+        env_file = ("../.env", ".env")
         extra = "ignore"
 
 settings = Settings()
