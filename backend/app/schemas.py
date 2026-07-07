@@ -168,6 +168,7 @@ class DiagnosisCaseResponse(BaseModel):
 class ChatMessageInput(BaseModel):
     message: str = Field(..., min_length=1, max_length=1000)
     voice_base64: Optional[str] = None # For audio input simulation
+    language: Optional[str] = None
 
 class ChatMessageResponse(BaseModel):
     response: str

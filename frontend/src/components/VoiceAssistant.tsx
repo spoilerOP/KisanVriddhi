@@ -77,7 +77,7 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ lang }) => {
     if (!queryText.trim()) return;
     try {
       setLoading(true);
-      const res = await api.sendGeminiMessage({ message: queryText });
+      const res = await api.sendGeminiMessage({ message: queryText, language: lang });
       setAiResponse(res);
       
       // Auto TTS response

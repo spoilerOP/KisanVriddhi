@@ -118,7 +118,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ lang }) => {
 
     try {
       // Call Gemini server-side advisory endpoint
-      const response = await api.sendGeminiMessage({ message: queryText });
+      const response = await api.sendGeminiMessage({ message: queryText, language: lang });
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         sender: 'assistant',
@@ -293,6 +293,11 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ lang }) => {
                   ? 'bg-nature-600 text-white rounded-tr-sm'
                   : 'bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700/50 text-gray-800 dark:text-zinc-200 rounded-tl-sm'
               }`}>
+                {msg.sender === 'assistant' && (
+                  <span className="text-[9px] font-black uppercase tracking-wider text-nature-600 dark:text-nature-400 block mb-1.5">
+                    🌐 {lang === 'hi' ? 'हिन्दी (Hindi)' : lang === 'te' ? 'తెలుగు (Telugu)' : lang === 'ml' ? 'മലയാളം (Malayalam)' : 'English'} • AI Powered
+                  </span>
+                )}
                 {msg.text}
                 
                 {msg.sender === 'assistant' && msg.geminiData && (

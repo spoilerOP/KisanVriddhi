@@ -48,10 +48,30 @@ def call_gemini_api(prompt: str, image_data: dict = None) -> dict:
         logging.error(f"Gemini API call failed: {e}")
         return {}
 
-def generate_advisory_response(farmer, weather, crop_history, expert_kb, query_str) -> dict:
-    """Generate structured advisory using Gemini 2.5 Flash / 1.5 Flash."""
+def generate_advisory_response(farmer, weather, crop_history, expert_kb, query_str, language: str = None) -> dict:
+    """Generate structured advisory using Gemini 2.0 Flash."""
+    selected_lang = language or farmer.preferred_lang or "en"
+    
+    LANGUAGE_MAP = {
+        "en": "English",
+        "hi": "Hindi",
+        "ml": "Malayalam",
+        "te": "Telugu"
+    }
+    lang_name = LANGUAGE_MAP.get(selected_lang, "English")
+
+    lang_rules = f"""IMPORTANT RULES:
+1. Reply ONLY in {lang_name}.
+2. Never switch to English under any circumstances.
+3. Use simple farmer-friendly {lang_name}.
+4. Use agricultural terminology commonly understood by farmers speaking {lang_name}.
+5. Keep the response concise, structured, and actionable.
+6. The entire text fields in the returned JSON object MUST be translated to {lang_name}."""
+
     prompt = f"""You are the agricultural advisory engine 'KisanVriddhi'.
 Analyze the farmer query and contextual agricultural data.
+
+{lang_rules}
 
 Farmer Context:
 - Name: {farmer.name}
@@ -75,21 +95,20 @@ User Query:
 
 Please generate a JSON object matching this schema EXACTLY:
 {{
-  "recommendation": "Main advisory response in user's language (concise, max 3 sentences)",
-  "why": "Brief explanation of why this was recommended in user's language",
-  "potential_risks": ["Risk 1 in user's language", "Risk 2 in user's language"],
-  "expected_benefits": ["Benefit 1 in user's language", "Benefit 2 in user's language"],
+  "recommendation": "Main advisory response (concise, max 3 sentences)",
+  "why": "Brief explanation of why this was recommended",
+  "potential_risks": ["Risk 1", "Risk 2"],
+  "expected_benefits": ["Benefit 1", "Benefit 2"],
   "advisory_strength": "High", // Can be "High", "Medium", or "Low" based on evidence quality
   "evidence_sources": ["Weather Forecast", "Farmer Profile", "Expert Knowledge Base"], // List elements used
   "action_plan": [
-    {{"day": 1, "action": "Day 1 task details in user's language"}},
-    {{"day": 2, "action": "Day 2 task details in user's language"}},
-    {{"day": 3, "action": "Day 3 task details in user's language"}},
-    {{"day": 5, "action": "Day 5 task details in user's language"}},
-    {{"day": 7, "action": "Day 7 task details in user's language"}}
+    {{"day": 1, "action": "Day 1 task details"}},
+    {{"day": 2, "action": "Day 2 task details"}},
+    {{"day": 3, "action": "Day 3 task details"}},
+    {{"day": 5, "action": "Day 5 task details"}},
+    {{"day": 7, "action": "Day 7 task details"}}
   ]
 }}
-Ensure the entire text fields are translated to the farmer's preferred language (code: {farmer.preferred_lang}).
 """
     return call_gemini_api(prompt)
 

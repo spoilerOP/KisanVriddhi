@@ -49,7 +49,8 @@ def ask_gemini_advisory(
         weather=weather_data,
         crop_history=farmer.crop_history,
         expert_kb=kb_match,
-        query_str=user_query
+        query_str=user_query,
+        language=msg_input.language
     )
     
     # Validation & fallback in case Gemini call failed or returned empty dictionary
