@@ -71,8 +71,8 @@ def register(
         httponly=True,
         max_age=security.settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         expires=security.settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        samesite="lax",
-        secure=False,  # Set to True in production with HTTPS
+        samesite="none",  # Required for cross-origin (Vercel → Render)
+        secure=True,  # Required when samesite=none
     )
 
     return {
@@ -116,8 +116,8 @@ def login(
         httponly=True,
         max_age=security.settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         expires=security.settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        samesite="lax",
-        secure=False,  # Set to True in production
+        samesite="none",  # Required for cross-origin (Vercel → Render)
+        secure=True,  # Required when samesite=none
     )
 
     return {
@@ -186,8 +186,8 @@ def activate_demo_mode(
         httponly=True,
         max_age=security.settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         expires=security.settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        samesite="lax",
-        secure=False,
+        samesite="none",  # Required for cross-origin (Vercel → Render)
+        secure=True,  # Required when samesite=none
     )
 
     return {
