@@ -35,14 +35,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS Policy configuration
-origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:5173", # Vite dev default port
-    "http://127.0.0.1:5173"
-]
-
+# CORS Policy — allows any HTTPS origin (covers Vercel frontend) + local dev ports
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=r"https://.*|http://localhost:.*|http://127\.0\.0\.1:.*",
