@@ -10,19 +10,24 @@ from app.database import engine, Base
 from app import models
 from app.routers import auth, farmers, crops, weather, cases, assistant, officer, gemini_advisory, officer_ai, impact, analytics, tts
 
-# Initialize Database tables
-Base.metadata.create_all(bind=engine)
+# Initialize Database tables (wrapped to prevent startup crash)
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as _db_err:
+    logging.error(f"Database table creation failed (non-fatal): {_db_err}")
 
 # Auto seed database if empty
-from app.database import SessionLocal
-from app.demo_data import preload_demo_records
-
-db = SessionLocal()
 try:
-    if db.query(models.User).count() == 0:
-        preload_demo_records(db)
-finally:
-    db.close()
+    from app.database import SessionLocal
+    from app.demo_data import preload_demo_records
+    db = SessionLocal()
+    try:
+        if db.query(models.User).count() == 0:
+            preload_demo_records(db)
+    finally:
+        db.close()
+except Exception as _seed_err:
+    logging.error(f"Demo data seeding failed (non-fatal): {_seed_err}")
 
 app = FastAPI(
     title="KisanVriddhi — Agriculture Intelligence API",
