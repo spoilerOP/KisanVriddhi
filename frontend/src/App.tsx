@@ -48,6 +48,11 @@ const MainAppContent: React.FC = () => {
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
 
+  // OTP Verification States
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpError, setOtpError] = useState('');
+
   const handleDemoMode = async () => {
     try {
       setAuthLoading(true);
@@ -134,22 +139,12 @@ const MainAppContent: React.FC = () => {
           throw new Error("Mobile number must be a 10-15 digit number.");
         }
         
-        // Trigger register api
-        await register(
-          {
-            username: authForm.role === 'farmer' ? profileForm.mobile : authForm.username,
-            password: authForm.password,
-            role: authForm.role
-          },
-          {
-            name: profileForm.name,
-            mobile: profileForm.mobile,
-            state: profileForm.state,
-            district: profileForm.district,
-            village: profileForm.village,
-            preferred_lang: profileForm.preferred_lang
-          }
-        );
+        // Trigger OTP verification modal step
+        setOtpCode('');
+        setOtpError('');
+        setShowOtpModal(true);
+        setAuthLoading(false);
+        return;
       } else {
         await login({
           username: authForm.username,
@@ -158,6 +153,39 @@ const MainAppContent: React.FC = () => {
       }
     } catch (err: any) {
       setAuthError(err.message || 'Authentication failed. Please verify credentials.');
+      setAuthLoading(false);
+    }
+  };
+
+  const handleVerifyOtpAndRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otpCode !== '482061') {
+      setOtpError('Invalid OTP code. Please enter the standard demo code: 482061');
+      return;
+    }
+    
+    try {
+      setAuthLoading(true);
+      setOtpError('');
+      setShowOtpModal(false);
+      
+      await register(
+        {
+          username: authForm.role === 'farmer' ? profileForm.mobile : authForm.username,
+          password: authForm.password,
+          role: authForm.role
+        },
+        {
+          name: profileForm.name,
+          mobile: profileForm.mobile,
+          state: profileForm.state,
+          district: profileForm.district,
+          village: profileForm.village,
+          preferred_lang: profileForm.preferred_lang
+        }
+      );
+    } catch (err: any) {
+      setAuthError(err.message || 'Registration failed after OTP verification.');
     } finally {
       setAuthLoading(false);
     }
@@ -441,6 +469,67 @@ const MainAppContent: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Mock OTP Verification Overlay Dialog */}
+        {showOtpModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-zinc-900 border border-gray-150 dark:border-zinc-800/80 rounded-2xl p-6 w-full max-w-sm shadow-2xl space-y-4 text-xs font-semibold">
+              <div className="text-center">
+                <div className="p-3 bg-nature-50 dark:bg-nature-950/20 text-nature-600 dark:text-nature-400 rounded-2xl w-fit mx-auto mb-3">
+                  <Lock className="h-6 w-6" />
+                </div>
+                <h3 className="text-lg font-black text-gray-800 dark:text-zinc-200">OTP Mobile Verification</h3>
+                <p className="text-xs text-gray-400 mt-1 font-semibold">
+                  An OTP has been sent to +91 {authForm.role === 'farmer' ? profileForm.mobile.replace(/.(?=.{4})/g, '*') : authForm.username.replace(/.(?=.{4})/g, '*')}
+                </p>
+              </div>
+
+              {otpError && (
+                <div className="bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400 border border-red-200 dark:border-red-900/30 p-3 rounded-xl text-[11px] font-bold text-center">
+                  {otpError}
+                </div>
+              )}
+
+              <form onSubmit={handleVerifyOtpAndRegister} className="space-y-4 text-xs font-semibold">
+                <div>
+                  <label className="block text-gray-500 mb-1.5 text-center font-bold uppercase tracking-wider text-[10px]">
+                    Enter 6-Digit OTP Code
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    placeholder="e.g. 482061"
+                    value={otpCode}
+                    onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                    className="w-full text-center tracking-[0.7em] font-black text-lg bg-gray-50 dark:bg-zinc-850 border border-gray-150 dark:border-zinc-700/80 rounded-xl px-4 py-3 text-gray-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-nature-500"
+                    required
+                  />
+                </div>
+
+                <div className="text-center text-[10px] text-gray-400 font-semibold bg-gray-50 dark:bg-zinc-800/40 p-2.5 rounded-lg border border-gray-150/45">
+                  For evaluation, use standard demo code: <span className="font-extrabold text-nature-600 dark:text-nature-400">482061</span>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowOtpModal(false)}
+                    className="w-1/2 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-750 text-gray-700 dark:text-zinc-300 rounded-xl font-bold transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={authLoading}
+                    className="w-1/2 py-2.5 bg-nature-600 hover:bg-nature-700 text-white rounded-xl font-extrabold shadow-md flex items-center justify-center gap-1 transition"
+                  >
+                    Verify Code
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
