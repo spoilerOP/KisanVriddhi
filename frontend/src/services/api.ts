@@ -1,4 +1,5 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL || 'https://kisanvriddhi.onrender.com';
+
 
 // API request helper with credentials configured to support secure HttpOnly tokens
 async function apiRequest(path: string, options: RequestInit = {}) {
