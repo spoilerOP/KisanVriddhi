@@ -40,7 +40,7 @@ target field visits seamlessly.
   severity alerts appear as dynamic, animated banners on top, with actionable steps mapped
   directly on-screen.
 
-• Weather Intelligence Center
+• Weather Intelligence Center (Open-Meteo Integration)
   A flagship weather engine that replaces static rain/temp displays with agricultural
   analysis. Connects to real-time Open-Meteo forecasts to fetch apparent temperatures,
   UV indexes, cloud covers, and sunrise/sunset times. Renders WMO symbol status cards for
@@ -49,6 +49,13 @@ target field visits seamlessly.
   (Crop Stress, Disease, Waterlogging, Irrigation Need, Heatwave, and Pest Outbreak) along
   with personalized crop recommendations and protected impact estimates (water saved,
   yield protected, diseases prevented, and profit preserved).
+
+• Google Sheets Published CSV Q&A Syncing Integration
+  Enables agricultural agronomists to update the expert Q&A knowledge base dynamically
+  without code changes. The FastAPI backend contains a /api/assistant/sync-qa background
+  task endpoint that pulls from a published Google Sheet CSV URL (configured via
+  GOOGLE_SHEET_CSV_URL) and merges new rows into the local expert_kb.csv file, skipping
+  duplicates and ensuring offline availability.
 
 • Multilingual Voice Assistant & Server TTS
   Empowers farmers of all literacy levels. Integrated with Web Speech recognition mapping
@@ -59,10 +66,11 @@ target field visits seamlessly.
   across iOS, Android, Windows, and macOS without requiring local OS language packs.
 
 • Gemini AI Personalized Assistant
-  A specialized chat interface connected to the farmer's soil context and history.
-  Implements strict Indic language enforcement rules (Hindi, Telugu, Malayalam, English)
-  ensuring responses never switch mid-conversation. Provides a structured 7-day action
-  timeline, confidence scores, and evidence sources for every agronomist recommendation.
+  A specialized chat interface connected to the farmer's soil context, history, and the
+  expert Q&A knowledge base. Implements strict Indic language enforcement rules (Hindi,
+  Telugu, Malayalam, English) ensuring responses never switch mid-conversation. Provides
+  a structured 7-day action timeline, confidence scores, and evidence sources for every
+  agronomist recommendation.
 
 • AI Crop Recommendation Engine
   An intelligent crop selection module. Calibrates local weather, land size, and soil
@@ -129,14 +137,17 @@ Frontend Architecture (React + Vite)
 +----------------------+-----------------------------+------------------------------------+
 | Feature Checklist    | Traditional Agritech        | KisanVriddhi Platform              |
 +----------------------+-----------------------------+------------------------------------+
-| Weather Advisories   | Static 3-day forecast       | AI Risk analysis + Personalized    |
-|                      | numbers                     | Advice                             |
+| Weather Advisories   | Static 3-day forecast       | AI Risk analysis + Open-Meteo      |
+|                      | numbers                     | Integration                        |
 +----------------------+-----------------------------+------------------------------------+
 | Indic Readouts       | OS Voice-dependent          | Server MP3 generation              |
 |                      | (gibberish default)         | (All Devices)                      |
 +----------------------+-----------------------------+------------------------------------+
 | Pest & Disease       | Manual identification       | Gemini Vision Diagnostic +         |
 |                      | checklists                  | Escalation                         |
++----------------------+-----------------------------+------------------------------------+
+| Expert Knowledge     | Hardcoded static website    | Google Sheets Published CSV        |
+| Base                 | resources                   | syncing                            |
 +----------------------+-----------------------------+------------------------------------+
 | Officer Support      | Static list of local        | Interactive CRM Case Ticketing     |
 |                      | offices                     | & Briefs                           |
