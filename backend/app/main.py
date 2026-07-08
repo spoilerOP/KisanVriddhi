@@ -1,8 +1,9 @@
 import time
 import logging
-from fastapi import FastAPI, Request, Response, status
+from fastapi import FastAPI, Request, Response, status, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.exception_handlers import http_exception_handler
 
 from app.config import settings
 from app.database import engine, Base
@@ -58,11 +59,14 @@ async def add_security_headers_and_limit(request: Request, call_next):
 # Global Exception Handler for Error Sanitization (Security Rule)
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    # Log details securely on server, do not send trace to user
-    logging.error(f"Global server error: {str(exc)}", exc_info=True)
+    # Pass HTTPException through FastAPI's native handler so specific detail messages reach the client
+    if isinstance(exc, HTTPException):
+        return await http_exception_handler(request, exc)
+    # For unexpected exceptions, log details server-side but sanitize for client
+    logging.error(f"Global server error: {type(exc).__name__}: {str(exc)}", exc_info=True)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": "An internal server error occurred. Please contact system support."}
+        content={"detail": f"Internal error: {type(exc).__name__}: {str(exc)}"}
     )
 
 # Mount Routers
