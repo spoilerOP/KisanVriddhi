@@ -51,3 +51,7 @@ data/
 # TTS audio cache
 tts_cache/
 backend/tts_cache/
+
+# Google Cloud SDK
+google-cloud-sdk/
+gcloud.tar.gz
