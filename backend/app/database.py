@@ -2,7 +2,16 @@ from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from app.config import settings
 
-# For SQLite, we need connect_args={"check_same_thread": False}
+import os
+
+# Ensure target directory exists for SQLite databases to prevent OperationalError crashes
+if settings.DATABASE_URL.startswith("sqlite"):
+    db_file_path = settings.DATABASE_URL.replace("sqlite:///", "")
+    # Check if a directory prefix is present (e.g. ./data/kisan_alert.db)
+    db_dir = os.path.dirname(db_file_path)
+    if db_dir and not os.path.exists(db_dir):
+        os.makedirs(db_dir, exist_ok=True)
+
 if settings.DATABASE_URL.startswith("sqlite"):
     engine = create_engine(
         settings.DATABASE_URL, connect_args={"check_same_thread": False}
