@@ -57,17 +57,33 @@ async def add_security_headers_and_limit(request: Request, call_next):
     return response
 
 # Global Exception Handler for Error Sanitization (Security Rule)
+# NOTE: @app.exception_handler(Exception) runs inside ServerErrorMiddleware (outermost),
+# so its JSONResponse bypasses CORSMiddleware. We must manually add CORS headers here
+# or browsers will silently block the response with "Failed to fetch".
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    # Pass HTTPException through FastAPI's native handler so specific detail messages reach the client
+    origin = request.headers.get("origin", "")
+    cors_headers = {}
+    if origin:
+        cors_headers["Access-Control-Allow-Origin"] = origin
+        cors_headers["Access-Control-Allow-Credentials"] = "true"
+
+    # Pass HTTPException through with its proper status code and detail
     if isinstance(exc, HTTPException):
-        return await http_exception_handler(request, exc)
-    # For unexpected exceptions, log details server-side but sanitize for client
-    logging.error(f"Global server error: {type(exc).__name__}: {str(exc)}", exc_info=True)
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
+            headers=cors_headers
+        )
+
+    # For unexpected server errors, log full details but expose enough for debugging
+    logging.error(f"Unhandled error: {type(exc).__name__}: {str(exc)}", exc_info=True)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": f"Internal error: {type(exc).__name__}: {str(exc)}"}
+        content={"detail": f"Server error: {type(exc).__name__}: {str(exc)}"},
+        headers=cors_headers
     )
+
 
 # Mount Routers
 app.include_router(auth.router)
