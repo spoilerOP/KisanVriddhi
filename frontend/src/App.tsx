@@ -462,7 +462,7 @@ const MainAppContent: React.FC = () => {
     <div className="min-h-screen flex bg-gray-50 dark:bg-zinc-950 font-sans text-gray-900 dark:text-zinc-50">
       {/* 1. Desktop Sidebar */}
       {user.role === 'farmer' && (
-        <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-zinc-900 border-r border-gray-100 dark:border-zinc-800 shrink-0 select-none">
+        <aside className="hidden lg:flex flex-col w-64 h-screen sticky top-0 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md border-r border-gray-200/50 dark:border-zinc-800/50 shadow-[4px_0_24px_-4px_rgba(0,0,0,0.06)] shrink-0 select-none z-40 transition-all duration-300">
           {/* Logo */}
           <div className="p-6 border-b border-gray-50 dark:border-zinc-800 flex items-center gap-2.5">
             <div className="p-1.5 bg-nature-600 text-white rounded-xl shadow-premium">
@@ -566,7 +566,7 @@ const MainAppContent: React.FC = () => {
       {/* 3. Main Workspace Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Navbar */}
-        <header className="h-16 shrink-0 bg-white dark:bg-zinc-900 border-b border-gray-100 dark:border-zinc-800 flex justify-between items-center px-4 md:px-6 relative z-30 select-none">
+        <header className="h-16 shrink-0 sticky top-0 bg-white/85 dark:bg-zinc-900/85 backdrop-blur-md border-b border-gray-200/50 dark:border-zinc-800/50 flex justify-between items-center px-4 md:px-6 z-30 select-none shadow-[0_2px_15px_-3px_rgba(0,0,0,0.04)]">
           {/* Mobile menu trigger */}
           <div className="flex items-center gap-3">
             {user.role === 'farmer' && (
