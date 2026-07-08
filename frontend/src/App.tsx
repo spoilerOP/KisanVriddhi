@@ -453,9 +453,12 @@ const MainAppContent: React.FC = () => {
     { id: 'weather', name: getTranslation('weather', lang), icon: CloudSun },
     { id: 'disease', name: getTranslation('diseaseLog', lang), icon: Upload },
     { id: 'assistant', name: getTranslation('assistant', lang), icon: Bot },
-    { id: 'voice', name: 'Voice Advisor', icon: Mic },
-    { id: 'tech', name: 'AI Tech Showcase', icon: Cpu },
-    { id: 'judge', name: 'Judge Walkthrough', icon: Sparkles }
+    { id: 'voice', name: 'Voice Advisor', icon: Mic }
+  ];
+
+  const judgeTabs = [
+    { id: 'tech', name: 'AI Tech Stack Showcase', icon: Cpu },
+    { id: 'judge', name: 'Guided Walkthrough', icon: Sparkles }
   ];
 
   return (
@@ -474,14 +477,14 @@ const MainAppContent: React.FC = () => {
           </div>
 
           {/* Links */}
-          <nav className="flex-1 p-4 space-y-1">
+          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
             {farmerTabs.map(tab => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition ${
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition ${
                     activeTab === tab.id
                       ? 'bg-nature-600 text-white shadow-premium'
                       : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-zinc-800/40'
@@ -492,6 +495,30 @@ const MainAppContent: React.FC = () => {
                 </button>
               );
             })}
+
+            {/* Judge Evaluation Section Divider */}
+            <div className="pt-4 mt-4 border-t border-gray-150/40 dark:border-zinc-800/40">
+              <span className="text-[9px] uppercase tracking-wider font-extrabold text-indigo-600 dark:text-indigo-400 block px-4 mb-2">
+                Evaluation & Demo
+              </span>
+              {judgeTabs.map(tab => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition ${
+                      activeTab === tab.id
+                        ? 'bg-indigo-600 text-white shadow-md'
+                        : 'text-gray-450 hover:text-indigo-650 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/10'
+                    }`}
+                  >
+                    <Icon className="h-4.5 w-4.5 shrink-0 text-indigo-500/80" />
+                    {tab.name}
+                  </button>
+                );
+              })}
+            </div>
           </nav>
 
           {/* User profile footer */}
@@ -536,7 +563,7 @@ const MainAppContent: React.FC = () => {
                         setActiveTab(tab.id);
                         setSidebarOpen(false);
                       }}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition ${
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition ${
                         activeTab === tab.id
                           ? 'bg-nature-600 text-white shadow-premium'
                           : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
@@ -547,6 +574,33 @@ const MainAppContent: React.FC = () => {
                     </button>
                   );
                 })}
+
+                {/* Judge Evaluation Section Divider */}
+                <div className="pt-4 mt-4 border-t border-gray-150/45 dark:border-zinc-800/45 font-semibold text-xs">
+                  <span className="text-[9px] uppercase tracking-wider font-extrabold text-indigo-600 dark:text-indigo-400 block px-4 mb-2">
+                    Evaluation & Demo
+                  </span>
+                  {judgeTabs.map(tab => {
+                    const Icon = tab.icon;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => {
+                          setActiveTab(tab.id);
+                          setSidebarOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition ${
+                          activeTab === tab.id
+                            ? 'bg-indigo-600 text-white shadow-md'
+                            : 'text-gray-450 hover:text-indigo-600 hover:bg-indigo-50/30'
+                        }`}
+                      >
+                        <Icon className="h-4.5 w-4.5 shrink-0 text-indigo-500" />
+                        {tab.name}
+                      </button>
+                    );
+                  })}
+                </div>
               </nav>
             </div>
             <div className="border-t border-gray-50 dark:border-zinc-850 pt-4 space-y-2">
