@@ -10,11 +10,9 @@ from app.database import engine, Base
 from app import models
 from app.routers import auth, farmers, crops, weather, cases, assistant, officer, gemini_advisory, officer_ai, impact, analytics, tts
 
-# Initialize Database tables (wrapped to prevent startup crash)
-try:
-    Base.metadata.create_all(bind=engine)
-except Exception as _db_err:
-    logging.error(f"Database table creation failed (non-fatal): {_db_err}")
+# Initialize Database tables — must succeed for the app to work
+Base.metadata.create_all(bind=engine)
+
 
 # Auto seed database if empty
 try:

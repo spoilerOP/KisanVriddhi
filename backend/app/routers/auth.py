@@ -152,14 +152,26 @@ def get_me(
     }
 
 from app.demo_data import preload_demo_records
+from app.database import engine, Base
 
 @router.post("/demo", response_model=schemas.Token)
 def activate_demo_mode(
     response: Response,
     db: Session = Depends(get_db)
 ):
-    preload_demo_records(db)
-    
+    import logging
+    logger = logging.getLogger(__name__)
+    try:
+        # Ensure all tables exist before seeding (critical for fresh /tmp databases)
+        Base.metadata.create_all(bind=engine)
+        preload_demo_records(db)
+    except Exception as e:
+        logger.error(f"Demo seeding failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to seed demo records: {str(e)}"
+        )
+
     # Retrieve the seeded farmer Baldev Singh
     user = db.query(models.User).filter(models.User.username == "9876500001").first()
     if not user:
@@ -167,6 +179,7 @@ def activate_demo_mode(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to seed demo records."
         )
+
 
     farmer_id = None
     name = user.username
