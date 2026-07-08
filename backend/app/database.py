@@ -12,12 +12,25 @@ if settings.DATABASE_URL.startswith("sqlite"):
     if db_dir and not os.path.exists(db_dir):
         os.makedirs(db_dir, exist_ok=True)
 
-if settings.DATABASE_URL.startswith("sqlite"):
-    engine = create_engine(
-        settings.DATABASE_URL, connect_args={"check_same_thread": False}
-    )
-else:
-    engine = create_engine(settings.DATABASE_URL)
+# Initialize Database Engine with failsafe fallback to /tmp
+try:
+    if settings.DATABASE_URL.startswith("sqlite"):
+        engine = create_engine(
+            settings.DATABASE_URL, connect_args={"check_same_thread": False}
+        )
+    else:
+        engine = create_engine(settings.DATABASE_URL)
+    # Force connection test to verify write permissions
+    engine.connect().close()
+except Exception as e:
+    if settings.DATABASE_URL.startswith("sqlite"):
+        fallback_url = "sqlite:////tmp/kisan_alert.db"
+        print(f"DATABASE WARNING: Primary SQLite path is not writable. Falling back to /tmp: {fallback_url}. Details: {str(e)}")
+        engine = create_engine(
+            fallback_url, connect_args={"check_same_thread": False}
+        )
+    else:
+        raise e
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
