@@ -57,7 +57,8 @@ const MainAppContent: React.FC = () => {
     try {
       setAuthLoading(true);
       setAuthError('');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/demo`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://kisanvriddhi.onrender.com'}/api/auth/demo`, {
+
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include'
