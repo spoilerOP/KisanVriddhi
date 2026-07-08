@@ -3,7 +3,7 @@ set -e
 
 # Project configuration
 PROJECT_ID="kissanproject-415814" # Will default to active project in Cloud Shell
-REGION="us-central1"
+REGION="asia-south1"
 
 echo "=== 1. Setting active Google Cloud Project ==="
 # Get active project ID from gcloud configuration if not hardcoded

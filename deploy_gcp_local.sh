@@ -3,7 +3,7 @@ set -e
 
 # Project configuration
 PROJECT_ID="kisanvriddhi"
-REGION="us-central1"
+REGION="asia-south1"
 
 echo "=== 1. Setting active Google Cloud Project ==="
 ACTIVE_PROJECT=$(gcloud config get-value project 2>/dev/null)
